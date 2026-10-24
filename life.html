@@ -10,7 +10,7 @@
 <div class="lab-shell">
  <header class="masthead">
   <a class="logo" href="life.html" aria-label="WorldGuard Life Lab home"><span class="mark">◈</span><span>WORLD GUARD <b>/ LIFE LAB</b><small>OBSERVABLE DECISION LEARNING</small></span></a>
-  <div class="header-right"><a href="index.html" class="headerlink">Infrastructure Lab ↗</a><span class="signal"><span class="lamp"></span> LOCAL SYNTHETIC WORLD</span></div>
+  <div class="header-right"><button type="button" id="settingsChecklist" class="button secondary" aria-haspopup="dialog">⚙ Settings · Requirement checklist</button><a href="index.html" class="headerlink">Infrastructure Lab ↗</a><span class="signal"><span class="lamp"></span> LOCAL SYNTHETIC WORLD</span></div>
  </header>
  <div class="intro"><div><p class="eyebrow">SIMULATION EXPERIMENT 02 / EXPERIENTIAL ACTION LEARNING</p><h1>A world of choices.<br><em>Every consequence visible.</em></h1><p>Agents live simulated daily lives, work as software employees, encounter adversarial instructions and request human review. Train a discrete-action policy, zoom from globe to apartment, then inspect each decision frame by frame.</p></div><div class="intro-id">WORLD STATE <strong>WG-LIFE-001</strong><span>NO REAL COMPUTERS CONNECTED</span></div></div>
  <section class="stats" aria-label="Simulation statistics">
@@ -41,6 +41,14 @@
  </main>
  <footer><strong>WORLD GUARD · LIFE LAB</strong><span>This is a small, synthetic research environment. No claim of human-like belief, real-world alignment, or full Earth fidelity.</span><span>OPEN SOURCE / MIT</span></footer>
 </div>
+<dialog id="requirementsDialog" class="requirements-dialog" aria-labelledby="requirementsTitle" aria-describedby="requirementsHelp">
+ <div class="requirements-head"><div><p class="eyebrow">WORLD GUARD / SETTINGS / ACCEPTANCE AUDIT</p><h2 id="requirementsTitle">Verbatim requirements checklist</h2><p id="requirementsHelp">Checked means verified only within the existing synthetic prototype, not a finished 3D game. Tap a checked item to go directly to its working feature. Partial and missing requirements are never marked done.</p><p id="requirementVersion" class="requirement-version"></p></div><button type="button" id="closeRequirements" class="button secondary">Close ✕</button></div>
+ <div class="requirement-controls"><label for="requirementSearch">Search requirements<input id="requirementSearch" type="search" placeholder="Search original requirements…"></label><label for="requirementFilter">Status<select id="requirementFilter"><option value="all">All statuses</option><option value="verified">Verified in prototype</option><option value="partial">Partial</option><option value="missing">Not implemented</option></select></label></div>
+ <div class="requirement-summary" id="requirementSummary"></div><div class="requirement-note" id="requirementNotice" aria-live="polite"></div>
+ <ol id="requirementItems" class="requirement-items"></ol>
+</dialog>
 <script defer src="life.bundle.js"></script>
+<script defer src="checklist.data.js"></script>
+<script defer src="checklist-ui.js"></script>
 </body>
 </html>

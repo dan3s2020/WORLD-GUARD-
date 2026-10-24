@@ -307,5 +307,29 @@ el('approve').addEventListener('click',()=>{stop();resolveLifeReview(w,true);fra
 el('export').addEventListener('click',exportCheckpoint);
 populateCityButtons();populateAgents();render();
 el('viewerLoading').hidden=true;
+// Navigation API for the immutable acceptance checklist. Never awards completion.
+window.WorldGuardFeatureFocus=function navigateToVerifiedFeature(feature){
+ const destination={
+  globe:['worldCanvas','globe'],city:['worldCanvas','city'],building:['worldCanvas','building'],
+  apartment:['worldCanvas','agent'],agent:['agentDetails','agent'],choices:['options',null],
+  review:['runStatus',null],guard:['runStatus',null],replay:['frame',null],
+  run:['run',null],export:['export',null],train:['train',null],
+  ledger:['events',null],checklist:['settingsChecklist',null]
+ }[feature];
+ if(!destination)return false;
+ const [id,level]=destination;
+ if(level==='globe'){stop();selectView('globe');}
+ if(level==='city'){stop();view.city='eu';selectView('city');}
+ if(level==='building'){stop();view.city='eu';view.building='B-01';selectView('building');}
+ if(level==='agent'){stop();const chosen=w.agents[0];selectedAgent=chosen.id;view.city=chosen.city;view.building=chosen.building;el('agentSelect').value=chosen.id;selectView('agent');}
+ const target=el(id);
+ if(!target)return false;
+ target.scrollIntoView({block:'center',behavior:'instant'});
+ target.classList.add('requirement-focus');
+ target.addEventListener('animationend',()=>target.classList.remove('requirement-focus'),{once:true});
+ if(target.matches('button,select,input'))target.focus({preventScroll:true});
+ return true;
+};
+
 
 })();

@@ -18,3 +18,11 @@
 - Training uses independent local decision updates and held-out seed evaluation against a random baseline. A high score is not proof of actual alignment.
 - Globe rotation/zoom and clicking buildings/apartments have parallel city/agent-selection controls for accessibility.
 - The demo must not request external credentials, modify real files, connect to a user computer or falsely represent an AI as a human.
+
+## v0.2.x acceptance checklist contract
+- The version-controlled `docs/REQUIREMENTS_CHECKLIST.json` is the only source of checked statuses; no user click may mark an unimplemented feature as done.
+- Generate `checklist.data.js` using `npm run build:checklist`, and validate it using `npm test`, including Windows line ending compatibility.
+- Settings dialog is keyboard accessible, escapes/closes and restores focus. Search and status filter do not lose query state while typing.
+- A verified (synthetic) checklist item must have a directly actionable destination implemented by `window.WorldGuardFeatureFocus`. For partial items, the UI must clearly warn it is incomplete; missing items have no navigation.
+- The status `verified` does not imply the original 3D/neural model requirement has been met: verified always means a narrow prototype feature is present and auditable.
+- The developer does not alter the Life Lab simulation or training state just by opening and filtering Settings. Camera navigation may change when user asks to inspect an item.

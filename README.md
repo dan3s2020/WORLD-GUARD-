@@ -98,3 +98,11 @@ Start with a failing safety test. Then change the engine or policy in a small co
 ### License
 
 MIT. You can copy this project into a public repository, fork it, modify it and redistribute it with attribution.
+
+## Verbatim feedback and auditable acceptance checklist (v0.2.x)
+
+The user rejected v0.2.x as **not a real 3D playable world and not real Laya/Jev-like neural training**. This feedback is preserved without euphemism in `docs/verbatim/FEEDBACK_LIFE_LAB_V0.2_2026-10-25.md`.
+
+Open `life.html` and use **Settings · Requirement checklist** to inspect 55 extracted requirements. Only a narrowly verified **synthetic prototype** feature is checked; click its button to go to the functioning control/scene. A partial or missing feature is never passed off as working. The checklist source is `docs/REQUIREMENTS_CHECKLIST.json` and is compiled to a browser-readable script with `npm run build:checklist`.
+
+**Laya refers to the decision model** at <https://github.com/NandhaKishorM/laya>, **not LayaAir**. See `docs/LAYA_DECISION_ENGINE.md`. The real Laya checkpoint has **not** been installed, fine-tuned, or connected. WORLD GUARD does **not** yet contain a real 3D interactive game or 3D moving agents. These remain uncompleted requirements.
