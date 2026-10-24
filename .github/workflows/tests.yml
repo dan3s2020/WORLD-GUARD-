@@ -1,0 +1,22 @@
+name: Safety invariants and learning baseline
+on:
+  push:
+  pull_request:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test critical world constraints and human review
+        run: npm test
+      - name: Run deterministic training/evaluation
+        run: npm run train
+      - name: Validate syntax
+        run: |
+          node --check ui.mjs
+          node --check sim/core.mjs
+          node --check sim/train.mjs
+          node --check sim/oversight.mjs
