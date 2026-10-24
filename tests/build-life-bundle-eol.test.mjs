@@ -19,7 +19,7 @@ for(const ending of ['LF','CRLF','mixed']){
     const content=ending==='CRLF'||(ending==='mixed'&&name!=='life.bundle.js')?canonical.replace(/\n/g,'\r\n'):canonical;
     writeFileSync(resolve(root,name),content);
    }
-   const check=()=>execFileSync(process.execPath,[resolve(root,'scripts/build-life-bundle.mjs'),'--check'],{encoding:'utf8'});
+   const check=()=>execFileSync(process.execPath,[resolve(root,'scripts/build-life-bundle.mjs'),'--check'],{encoding:'utf8',stdio:['ignore','pipe','pipe']});
    assert.match(check(),/PASS/);
    execFileSync(process.execPath,[resolve(root,'scripts/build-life-bundle.mjs')]);
    const built=readFileSync(resolve(root,'life.bundle.js'),'utf8');
