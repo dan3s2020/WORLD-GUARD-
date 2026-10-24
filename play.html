@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="dark" />
+    <title>WorldGuard · Living Planet 3D</title>
+    <meta
+      name="description"
+      content="A 3D synthetic planet with observable agents, live neural action learning and complete motion replay."
+    />
+    <link rel="stylesheet" href="game.css" />
+  </head>
+  <body>
+    <a class="skip" href="#controls">Skip to simulation controls</a>
+    <header>
+      <a class="brand" href="play.html"
+        >◈ WORLD GUARD <span>LIVING PLANET / 3D</span></a
+      >
+      <nav aria-label="Labs">
+        <a href="life.html">Life Lab</a
+        ><a href="index.html">Infrastructure Lab</a
+        ><button id="settingsChecklist" aria-haspopup="dialog">
+          Settings · Checklist
+        </button>
+      </nav>
+    </header>
+    <main>
+      <section class="world-column" aria-labelledby="worldTitle">
+        <div class="scene-heading">
+          <div>
+            <p class="eyebrow">PLANET → CITY → BUILDING → APARTMENT → AGENT</p>
+            <h1 id="worldTitle">A world you can follow.</h1>
+          </div>
+          <span class="live-label" id="mode">PAUSED</span>
+        </div>
+        <div class="viewport" id="viewport">
+          <canvas
+            id="planet"
+            tabindex="0"
+            aria-label="3D planet. Drag or use arrow keys to orbit. Pinch, scroll, plus and minus to zoom. Home shows the full planet; End approaches the selected agent."
+          ></canvas>
+          <div id="startup" class="startup" role="status">
+            Loading the 3D planet…
+          </div>
+          <div class="scene-status">
+            <span id="location">PLANET / NOVARA</span
+            ><span id="clock">DAY 01 · 07:00</span>
+          </div>
+          <div class="scene-bottom">
+            <span id="cameraInfo">Perspective 3D · Local synthetic world</span
+            ><span id="motion">36 residents · simulation paused</span>
+          </div>
+        </div>
+        <div class="camera-tools" aria-label="Camera controls">
+          <div class="row">
+            <button id="planetView">Entire planet</button
+            ><button id="cityView">City</button
+            ><button id="buildingView">Building</button
+            ><button id="apartmentView">Apartment</button
+            ><button id="agentView">Up close</button
+            ><label class="check"
+              ><input type="checkbox" id="follow" checked /> Follow selected
+              agent</label
+            >
+          </div>
+          <div class="zoom-row">
+            <button id="zoomOut" aria-label="Zoom out">−</button
+            ><label for="zoom">Planet</label
+            ><input
+              type="range"
+              id="zoom"
+              min="0"
+              max="1000"
+              value="100"
+              aria-label="Zoom from entire planet to agent"
+            /><span>Agent</span
+            ><button id="zoomIn" aria-label="Zoom in">+</button
+            ><button id="orbitLeft" aria-label="Orbit camera left">↶</button
+            ><button id="orbitRight" aria-label="Orbit camera right">↷</button
+            ><button id="tiltUp" aria-label="Tilt camera up">↑</button
+            ><button id="tiltDown" aria-label="Tilt camera down">↓</button>
+          </div>
+          <div class="row" id="cities" aria-label="Choose a city"></div>
+          <div id="buildingRooms" hidden>
+            <p id="buildingName" class="mono"></p>
+            <div
+              id="apartments"
+              class="row"
+              aria-label="Apartments in the inspected building"
+            ></div>
+          </div>
+        </div>
+        <section class="replay-panel" aria-labelledby="replayTitle">
+          <div class="row spread">
+            <h2 id="replayTitle">Every move, recorded.</h2>
+            <span id="frameCount" class="mono">FRAME 0 / 0</span>
+          </div>
+          <label for="timeline" class="sr-only">Recorded world frame</label
+          ><input
+            type="range"
+            id="timeline"
+            min="0"
+            max="0"
+            step="1"
+            value="0"
+          />
+          <div class="row">
+            <button id="firstFrame">First</button
+            ><button id="prevFrame">Previous</button
+            ><button id="replay">Play replay</button
+            ><button id="nextFrame">Next</button
+            ><button id="liveFrame">Live</button
+            ><label for="replaySpeed"
+              >Replay speed<select id="replaySpeed">
+                <option value="1">1×</option>
+                <option value="3">3×</option>
+                <option value="10">10×</option>
+              </select></label
+            >
+          </div>
+          <p id="replayStatus" class="muted">
+            Live view. Replay includes movement and decision frames.
+          </p>
+        </section>
+        <section class="ledger-panel">
+          <div class="row spread">
+            <h2>Action → consequence → learning</h2>
+            <span id="ledgerCount" class="mono">0 TRANSITIONS</span>
+          </div>
+          <ol id="ledger" aria-label="Latest observed transitions">
+            <li>
+              No decisions yet. Start live learning or make a manual choice.
+            </li>
+          </ol>
+        </section>
+      </section>
+      <aside id="controls" aria-label="Simulation and training controls">
+        <section>
+          <div class="row spread">
+            <h2>Live simulation</h2>
+            <span class="pill">LOCAL</span>
+          </div>
+          <p class="muted">
+            Watch residents travel to work and home. Choices execute at their
+            destination. Start follows the selected resident. Consequential
+            requests pause for your review.
+          </p>
+          <div class="row">
+            <button id="start" class="primary">Start live learning</button
+            ><button id="pause" disabled>Pause</button
+            ><button id="step">One decision</button>
+          </div>
+          <label for="simSpeed"
+            >Simulation speed<select id="simSpeed">
+              <option value="1">1× · real time</option>
+              <option value="3" selected>3×</option>
+              <option value="10">10×</option>
+              <option value="30">30×</option>
+            </select></label
+          >
+          <p id="runStatus" class="status" role="status" aria-live="polite">
+            Ready. No decisions have been staged.
+          </p>
+          <div class="row">
+            <span id="dayCount">Day 1</span
+            ><span id="decisionCount">0 decisions</span
+            ><span id="blockCount">0 vetoes</span>
+          </div>
+        </section>
+        <section id="trainingPanel">
+          <div class="row spread">
+            <h2>Neural learning</h2>
+            <span class="pill">SMALL MLP</span>
+          </div>
+          <p class="muted">
+            A small action-value network learns from executed transitions using
+            gradient updates and experience replay. This model is separate from
+            Laya; no Laya checkpoint is loaded.
+          </p>
+          <label class="check"
+            ><input type="checkbox" id="learning" checked /> Learn from new
+            outcomes</label
+          >
+          <dl class="metrics">
+            <div>
+              <dt>Observed outcomes</dt>
+              <dd id="observations">0</dd>
+            </div>
+            <div>
+              <dt>Gradient updates</dt>
+              <dd id="updates">0</dd>
+            </div>
+            <div>
+              <dt>Training loss</dt>
+              <dd id="loss">—</dd>
+            </div>
+            <div>
+              <dt>Model weights</dt>
+              <dd id="parameters">—</dd>
+            </div>
+          </dl>
+          <button id="evaluate">Evaluate against random</button>
+          <p id="benchmark" class="muted" aria-live="polite">
+            Evaluation never updates the model. New seeds sample the same small
+            synthetic task family.
+          </p>
+        </section>
+        <section id="reviewPanel" class="review" hidden>
+          <h2>Human decision required</h2>
+          <p id="reviewDescription"></p>
+          <div class="row">
+            <button id="approve" class="gold">Approve this action</button
+            ><button id="deny">Deny</button>
+          </div>
+        </section>
+        <section id="agentPanel">
+          <h2>Resident inspector</h2>
+          <label for="resident"
+            >Select resident<select id="resident"></select
+          ></label>
+          <p id="residentDetails"></p>
+          <h3 id="scenarioTitle">Morning routine</h3>
+          <p class="muted" id="scenarioDescription"></p>
+          <div id="actions" class="actions"></div>
+          <p id="policyEvidence" class="mono muted"></p>
+          <details>
+            <summary>Selected resident's history</summary>
+            <ol id="personalHistory"></ol>
+          </details>
+        </section>
+        <section id="savePanel">
+          <h2>Continue where you left off.</h2>
+          <p class="muted">
+            World state, motion history, model weights and replay samples save
+            on this device. A restored session starts paused.
+          </p>
+          <div class="row">
+            <button id="save">Save checkpoint</button
+            ><button id="export">Export JSON</button>
+          </div>
+          <label class="file-label" for="import"
+            >Import checkpoint<input
+              id="import"
+              type="file"
+              accept="application/json,.json"
+          /></label>
+          <p id="saveStatus" class="status" role="status" aria-live="polite">
+            Opening local checkpoint storage…
+          </p>
+          <button id="newWorld">New world · keep model</button>
+        </section>
+        <p class="boundary">
+          Synthetic research game. Six simplified districts on an Earth-inspired
+          sphere. This is not an accurate Earth dataset or a demonstration of
+          real-world alignment.
+        </p>
+      </aside>
+    </main>
+    <dialog id="replaceDialog" aria-labelledby="replaceTitle">
+      <h2 id="replaceTitle">Replace the current world?</h2>
+      <p>
+        The model stays trained. Export your current world first to keep its
+        full replay.
+      </p>
+      <div class="row">
+        <button id="cancelNew">Keep current world</button
+        ><button id="confirmNew" class="gold">Create new world</button>
+      </div>
+    </dialog>
+    <!-- The canonical Settings checklist is shared with Life Lab. -->
+    <dialog
+      id="requirementsDialog"
+      class="requirements-dialog"
+      aria-labelledby="requirementsTitle"
+      aria-describedby="requirementsHelp"
+    >
+      <div class="requirements-head">
+        <div>
+          <p class="eyebrow">WORLD GUARD / SETTINGS / ACCEPTANCE AUDIT</p>
+          <h2 id="requirementsTitle">Verbatim requirements checklist</h2>
+          <p id="requirementsHelp">
+            Checked means verified only within the existing synthetic prototype,
+            not a finished 3D game. Tap a checked item to go directly to its
+            working feature. Partial and missing requirements are never marked
+            done.
+          </p>
+          <p id="requirementVersion" class="requirement-version"></p>
+        </div>
+        <button type="button" id="closeRequirements" class="button secondary">
+          Close ✕
+        </button>
+      </div>
+      <div class="requirement-controls">
+        <label for="requirementSearch"
+          >Search requirements<input
+            id="requirementSearch"
+            type="search"
+            placeholder="Search original requirements…" /></label
+        ><label for="requirementFilter"
+          >Status<select id="requirementFilter">
+            <option value="all">All statuses</option>
+            <option value="verified">Verified in prototype</option>
+            <option value="partial">Partial</option>
+            <option value="missing">Not implemented</option>
+          </select></label
+        >
+      </div>
+      <div class="requirement-summary" id="requirementSummary"></div>
+      <div
+        class="requirement-note"
+        id="requirementNotice"
+        aria-live="polite"
+      ></div>
+      <ol id="requirementItems" class="requirement-items"></ol>
+    </dialog>
+    <script defer src="game.bundle.js"></script>
+    <script defer src="checklist.data.js"></script>
+    <script defer src="checklist-ui.js"></script>
+  </body>
+</html>

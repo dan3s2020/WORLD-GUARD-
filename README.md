@@ -2,9 +2,40 @@
 
 An open-source, **synthetic** experiment in agent alignment: finish tasks while protecting a persistent world, resisting adversarial agents, and asking a human before taking consequential actions.
 
-**Status:** working v0.1 toy simulator and browser isometric viewer. Not a general-world simulation. It does not claim to solve AI alignment, train large language models, or prove real-world safety.
+**Status:** a v0.3 browser 3D game with a small online neural action learner, alongside the preserved v0.1/v0.2 labs. Not a general-world simulation. It does not claim to solve AI alignment, train large language models, or prove real-world safety.
 
-## Life Simulation Lab v0.2 — now implemented
+
+## Living Planet 3D v0.3 — corrective implementation
+
+**Open `play.html`** (Windows: `START_3D.cmd`). The committed standalone bundle needs no CDN or package install to play. Serve the files with Python 3:
+
+```bash
+python -m http.server 8000 --bind 127.0.0.1
+# Open http://127.0.0.1:8000/play.html
+```
+
+The new game adds a real Three.js sphere, six georeferenced miniature districts, furnished buildings and identifiable residents with articulated 3D bodies. One continuous perspective camera goes from the complete planet to a nearby resident. Scroll/pinch, the zoom slider, +/- buttons and Home/End reach the same finite limits; drag, arrow keys and orbit/tilt buttons rotate the camera. Start follows the selected resident. Physical routes connect home, office and civic workplaces; choices execute only on arrival. This is simplified waypoint locomotion, not a general collision/physics engine or accurate Earth dataset.
+
+A **1,174-parameter contextual neural action-value network** learns from actual executed or vetoed simulator transitions. It performs gradient updates with experience replay, reports real loss/counters, and can be frozen. It is **not Laya, a pretrained language model, or long-horizon general RL**. The legacy Q-learning remains in the other lab. Human approval still pauses the entire live world and cannot be supplied by the neural policy.
+
+Replay captures both motion and decision states; 1x/3x/10x historical playback never rewrites the live world or retrains the model. Multi-day residents, complete weights, RNG state, training replay samples and world history save locally in IndexedDB or export/import as JSON. A restored session starts paused. Replay is bounded at 6,000 frames; capacity stops execution instead of deleting early frames.
+
+To develop, rebuild, verify, or reproduce the neural benchmark:
+
+```bash
+npm ci
+npm run build:game
+npm test
+npx playwright install chromium
+npm run test:game:browser
+npm run train:spatial
+```
+
+The last command runs 1,800 observed transitions in the actual physical environment, explicitly **denies** all headless review requests, writes a reusable small neural checkpoint to `checkpoints/neural.json`, and reports evaluation against a random baseline on 2,000 new seeded samples of the **same finite task family**. No claim of unseen-task generalization or real-world safety is made. See `docs/LIVING_PLANET_3D.md` and `docs/benchmarks/neural-v0.3.json`.
+
+**Remaining:** Laya checkpoint download/inference/fine-tuning, independently learning adversaries, rich social/family and economic causality, actual workstation tool execution, public spectator hosting, and physical-device Android/iOS performance validation.
+
+## Life Simulation Lab v0.2 — preserved legacy mode
 
 **Launch:** open [life.html](life.html) from the same local server as the original index page.
 
@@ -105,4 +136,4 @@ The user rejected v0.2.x as **not a real 3D playable world and not real Laya/Jev
 
 Open `life.html` and use **Settings · Requirement checklist** to inspect 55 extracted requirements. Only a narrowly verified **synthetic prototype** feature is checked; click its button to go to the functioning control/scene. A partial or missing feature is never passed off as working. The checklist source is `docs/REQUIREMENTS_CHECKLIST.json` and is compiled to a browser-readable script with `npm run build:checklist`.
 
-**Laya refers to the decision model** at <https://github.com/NandhaKishorM/laya>, **not LayaAir**. See `docs/LAYA_DECISION_ENGINE.md`. The real Laya checkpoint has **not** been installed, fine-tuned, or connected. WORLD GUARD does **not** yet contain a real 3D interactive game or 3D moving agents. These remain uncompleted requirements.
+**Laya refers to the decision model** at <https://github.com/NandhaKishorM/laya>, **not LayaAir**. See `docs/LAYA_DECISION_ENGINE.md`. The real Laya checkpoint has **not** been installed, fine-tuned, or connected. The new `play.html` contains perspective 3D geometry and moving bodies. Rich physical/social gameplay and Laya integration remain incomplete; Settings records the narrower tested capabilities.

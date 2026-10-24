@@ -26,3 +26,23 @@
 - A verified (synthetic) checklist item must have a directly actionable destination implemented by `window.WorldGuardFeatureFocus`. For partial items, the UI must clearly warn it is incomplete; missing items have no navigation.
 - The status `verified` does not imply the original 3D/neural model requirement has been met: verified always means a narrow prototype feature is present and auditable.
 - The developer does not alter the Life Lab simulation or training state just by opening and filtering Settings. Camera navigation may change when user asks to inspect an item.
+
+## v0.3 physical world and neural policy
+
+Authoritative sources: `docs/VERBATIM_ACTION_LIFE_SIMULATION_2026-10-24.md`, `docs/verbatim/FEEDBACK_LIFE_LAB_V0.2_2026-10-25.md`, and `docs/verbatim/ZOOM_REQUIREMENT_2026-10-25.md`. Existing safety/approval rules in `sim/life.mjs` retain authority. `sim/spatial-life.mjs` adds deterministic locomotion, multi-day continuity, observed-outcome learning and spatial snapshots without changing legacy behavior.
+
+| Capability | Canonical owner | Source of truth | Allowed variants | Verification |
+|---|---|---|---|---|
+| Button | Native button + game.css | game-ui.mjs event bindings | Primary, neutral, authorization gold | tests/browser/game.spec.mjs |
+| Scrollbar | game.css global baseline | CSS root tokens | Standards properties with WebKit fallback | tests/browser/game.spec.mjs |
+| Select/Listbox | Native select | game-ui.mjs selection state | OS popup is intentional on desktop and mobile | tests/browser/game.spec.mjs |
+| Dialog/AlertDialog | Native dialog | checklist-ui.js, game-ui.mjs | Requirement inspection, new-world replacement | tests/browser/game.spec.mjs |
+
+- Full planet, city, building, apartment and up-close controls share the same continuous camera. Wheel, pinch, slider, zoom buttons and Home/End reach the same finite bounds. Arrow keys and orbit/tilt buttons provide non-drag alternatives.
+- Every model-generated action must arrive at its physical destination before executing through `lifeStep`. A human request freezes movement, time and model updates; only the explicit review buttons resolve it.
+- The model is a new small contextual neural network, **not Laya**. Its weights update from actual executed/blocked transitions. Evaluation uses new seeded samples from the same finite scenario family, freezes weights, and reports proposed harm separately from prevented harm.
+- Pause stops simulation time and training. Historical replay reads immutable spatial snapshots, including motion and historical training counters. Returning to Live resumes inspection of the current state; viewing replay never trains or forks the world.
+- IndexedDB saves the complete world, replay, weights, training replay samples and random generator state locally. Reload restores paused. Save/import failures retain the current session and expose a JSON export alternative.
+- New world requires confirmation and keeps the trained weights. It cannot silently discard replay. Imports validate before swapping the current runtime. Native file picker and select popups are intentional platform-owned controls.
+- Retention is bounded at 6,000 complete spatial snapshots. Capacity halts execution; it does not silently drop early frames. Export the session and create a new world to continue with retained weights.
+- Debug inspection is local and not an authentication or adversarial isolation boundary. No remote model, external tools, or user workstation is connected by this version.

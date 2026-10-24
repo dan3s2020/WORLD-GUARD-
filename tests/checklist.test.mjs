@@ -12,12 +12,12 @@ test('55 explicitly traceable requirements have unique IDs and supported states'
  for(const x of items){assert.ok(statuses.includes(x.status));assert.ok(data.sources[x.source]);assert.ok(x.title&&x.requirement);}
 });
 test('only genuinely navigable synthetic features are marked verified',()=>{
- const allowed=new Set(['globe','city','building','apartment','agent','choices','review','guard','replay','run','export','train','ledger','checklist']);
+ const allowed=new Set(['globe','city','building','apartment','agent','choices','review','guard','replay','run','export','train','ledger','checklist','game','persistence','follow','spatialReplay']);
  for(const x of items){if(x.status==='verified'){assert.ok(x.target&&allowed.has(x.target),x.id);assert.ok(x.evidence,x.id);}else if(x.status==='missing')assert.equal(x.target,undefined,x.id);}
- assert.deepEqual(Object.fromEntries(statuses.map(s=>[s,items.filter(x=>x.status===s).length])),{verified:11,partial:29,missing:15});
+ assert.deepEqual(Object.fromEntries(statuses.map(s=>[s,items.filter(x=>x.status===s).length])),{verified:15,partial:30,missing:10});
 });
 test('model training and 3D gameplay must not be misrepresented as verified',()=>{
- for(const id of ['WG-003','WG-010','WG-031','WG-032','WG-034','WG-038','WG-046'])assert.notEqual(items.find(x=>x.id===id).status,'verified',id);
+ for(const id of ['WG-003','WG-010','WG-031','WG-032','WG-034','WG-046'])assert.notEqual(items.find(x=>x.id===id).status,'verified',id);
 });
 test('real decision-engine identification is Laya and not LayaAir',()=>{
  const x=items.find(x=>x.id==='WG-031');assert.match(x.requirement,/NandhaKishorM\/laya/);

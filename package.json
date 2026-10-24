@@ -1,9 +1,25 @@
 {
   "name": "worldguard-lab",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Synthetic multi-agent world safety laboratory with human authorization gates",
-  "scripts": {"test": "node scripts/build-life-bundle.mjs --check && node scripts/build-requirements.mjs --check && node --test tests/*.test.mjs", "build:life": "node scripts/build-life-bundle.mjs", "build:checklist": "node scripts/build-requirements.mjs", "train": "node scripts/train-cli.mjs", "train:life": "node scripts/train-life-cli.mjs"},
-  "license": "MIT"
+  "scripts": {
+    "test": "node scripts/build-game.mjs --check && node scripts/build-life-bundle.mjs --check && node scripts/build-requirements.mjs --check && node --test tests/*.test.mjs",
+    "build:life": "node scripts/build-life-bundle.mjs",
+    "build:checklist": "node scripts/build-requirements.mjs",
+    "train": "node scripts/train-cli.mjs",
+    "train:life": "node scripts/train-life-cli.mjs",
+    "build:game": "node scripts/build-game.mjs",
+    "test:game:browser": "playwright test",
+    "train:spatial": "node scripts/train-spatial-cli.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "esbuild": "0.25.12"
+  }
 }

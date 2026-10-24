@@ -1,7 +1,7 @@
 /* Generated from docs/REQUIREMENTS_CHECKLIST.json by scripts/build-requirements.mjs. */
 window.WORLD_GUARD_REQUIREMENTS = {
   "project": "WORLD GUARD",
-  "releaseTarget": "Life Lab v0.2.x corrective acceptance",
+  "releaseTarget": "Living Planet 3D v0.3 corrective acceptance",
   "verificationPolicy": "Only status=verified may render a checked checkbox or jump-to-feature button. Verified means a narrow demonstrated prototype capability, not the requested complete game.",
   "sources": {
     "foundation": "docs/CONVERSATION_VERBATIM_2026-10-24.md",
@@ -16,7 +16,7 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "source": "foundation",
       "status": "partial",
       "target": "train",
-      "evidence": "Existing Q-table learns toy reward decisions. No neural checkpoint training."
+      "evidence": "play.html uses a 1,174-parameter neural action-value model trained from executed world transitions. Laya/large-model fine-tuning remains absent."
     },
     {
       "id": "WG-002",
@@ -25,14 +25,16 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "source": "foundation",
       "status": "partial",
       "target": "globe",
-      "evidence": "2.5D city projections exist; no autonomous visible walking avatars."
+      "evidence": "play.html adds a real perspective 3D world, bodies, furnishings and routed locomotion. General physics and rich gameplay remain incomplete."
     },
     {
       "id": "WG-003",
       "title": "Native interactive 3D world",
       "requirement": "Actual perspective 3D graphics with camera movement, geometry, physics and 3D agent bodies.",
       "source": "feedback",
-      "status": "missing"
+      "status": "partial",
+      "target": "game",
+      "evidence": "Three.js perspective sphere, meshes, orbit camera and moving 3D bodies in play.html. Locomotion follows deterministic waypoint routes; no general collision/physics engine."
     },
     {
       "id": "WG-004",
@@ -41,7 +43,7 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "source": "feedback",
       "status": "partial",
       "target": "globe",
-      "evidence": "Current dashboard responsive; 3D game is absent."
+      "evidence": "Desktop and 390px touch-layout browser tests pass for the 3D scene and zoom controls. Physical Android/iOS device performance is not yet verified."
     },
     {
       "id": "WG-005",
@@ -50,7 +52,7 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "source": "foundation",
       "status": "partial",
       "target": "globe",
-      "evidence": "Current globe is a simplified 2D projection, not a planet-scale engine."
+      "evidence": "play.html renders a real 3D sphere with six georeferenced synthetic districts. Planet-wide economy, geography and civil dependencies remain absent."
     },
     {
       "id": "WG-006",
@@ -93,7 +95,9 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "title": "Visible, moving agent bodies",
       "requirement": "Each AI agent must move and perform simulated actions in the 3D world.",
       "source": "feedback",
-      "status": "missing"
+      "status": "partial",
+      "target": "apartment",
+      "evidence": "All residents have 3D bodies, waypoint walking, action poses and recorded positions. Rich task-specific body interaction and independent life behavior remain incomplete. tests/spatial.test.mjs checks arrival before action; browser test observes real movement."
     },
     {
       "id": "WG-011",
@@ -102,7 +106,7 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "source": "life",
       "status": "partial",
       "target": "agent",
-      "evidence": "Stable state/schedule in a short synthetic day; no detailed family or physical life simulation."
+      "evidence": "New physical runtime continues across days and persists agent state/history. Detailed autonomous family life remains missing."
     },
     {
       "id": "WG-012",
@@ -138,7 +142,7 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "source": "life",
       "status": "partial",
       "target": "agent",
-      "evidence": "Occupations and workplaces recorded as state, no physical traversal or rich social dynamics."
+      "evidence": "Physical residents now walk between furnished homes, offices and civic buildings. Job tasks remain finite synthetic choices."
     },
     {
       "id": "WG-016",
@@ -265,7 +269,7 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "source": "foundation",
       "status": "partial",
       "target": "train",
-      "evidence": "Q-table updates visible in statistics, not a visible training neural agent."
+      "evidence": "Local UI shows actual neural loss, observations, gradient updates and synchronized motion. Public training stream remains absent."
     },
     {
       "id": "WG-031",
@@ -304,14 +308,16 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "source": "life",
       "status": "partial",
       "target": "agent",
-      "evidence": "World has independent states, but one shared toy policy with no neural individuality."
+      "evidence": "Independent resident state and histories share one small neural policy. Separate per-agent weights/persona learning are not implemented."
     },
     {
       "id": "WG-036",
       "title": "Persistent training across restarts",
       "requirement": "Checkpoints survive app/process restart and training can continue.",
       "source": "life",
-      "status": "missing"
+      "status": "verified",
+      "target": "persistence",
+      "evidence": "play.html saves and restores complete worlds, spatial replay, weights, experience replay and RNG state via IndexedDB or JSON. Browser reload and deterministic continuation tests pass."
     },
     {
       "id": "WG-037",
@@ -320,14 +326,16 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "source": "life",
       "status": "verified",
       "target": "replay",
-      "evidence": "Snapshot ledger and timeline. Frame replay tested in sim/life.mjs."
+      "evidence": "Both legacy decision frames and new spatial movement/decision frames are replayable. Capacity halts the new session at 6,000 spatial frames rather than truncating history."
     },
     {
       "id": "WG-038",
       "title": "Watch live agent behavior",
       "requirement": "Camera follows moving actions while training runs, not just numerical events.",
       "source": "feedback",
-      "status": "missing"
+      "status": "verified",
+      "target": "follow",
+      "evidence": "play.html follows the selected resident while authoritative recorded coordinates change. Freeze-follow option retains the camera target. Browser movement and camera tests cover the feature."
     },
     {
       "id": "WG-039",
@@ -361,9 +369,9 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "title": "Variable replay speeds",
       "requirement": "Playback slider and speed control for complete history.",
       "source": "life",
-      "status": "partial",
-      "target": "replay",
-      "evidence": "Speed applies to forward execution; full recorded frame playback is manual."
+      "status": "verified",
+      "target": "spatialReplay",
+      "evidence": "play.html replays all recorded movement and decision frames at 1x, 3x or 10x, without modifying live world state or model weights; browser test verifies immutability."
     },
     {
       "id": "WG-043",
@@ -440,7 +448,9 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "title": "Open-source graphics engine selection",
       "requirement": "Choose an actual 3D engine independently of Laya, such as Three.js or Godot.",
       "source": "feedback",
-      "status": "missing"
+      "status": "verified",
+      "target": "game",
+      "evidence": "Three.js 0.186.1 is pinned, bundled locally and exercised in WebGL browser tests. Graphics runtime is separate from the neural policy."
     },
     {
       "id": "WG-052",
@@ -458,7 +468,7 @@ window.WORLD_GUARD_REQUIREMENTS = {
       "source": "foundation",
       "status": "verified",
       "target": "train",
-      "evidence": "Q-learning benchmark works on held-out synthetic contexts; not sufficient for general agents."
+      "evidence": "Legacy Q-learning and new observed-outcome neural tests compare against seeded random baselines. New seed samples belong to the same finite scenario family, not unseen tasks."
     },
     {
       "id": "WG-054",

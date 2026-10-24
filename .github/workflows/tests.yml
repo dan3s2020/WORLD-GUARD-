@@ -10,6 +10,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install locked build dependencies
+        run: npm ci
       - name: Test critical world constraints and human review
         run: npm test
       - name: Run deterministic training/evaluation
@@ -20,3 +22,14 @@ jobs:
           node --check sim/core.mjs
           node --check sim/train.mjs
           node --check sim/oversight.mjs
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:game:browser

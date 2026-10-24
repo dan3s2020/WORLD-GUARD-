@@ -27,8 +27,8 @@ The user has NOT confirmed that the supplied repository is the original project 
 
 ## Explicit current status
 
-**NOT IMPLEMENTED / NOT VERIFIED:** Laya installation on the user computer; neural model download; inference integrated into WORLD GUARD; checkpoint fine-tuning; visible 3D agents; synchronized online model learning. The current Life Lab uses a synthetic tabular Q-learning benchmark and 2D canvas rendering.
+**NOT IMPLEMENTED / NOT VERIFIED:** Laya installation on the user computer; neural model download; inference integrated into WORLD GUARD; Laya checkpoint fine-tuning; synchronized Laya model learning. The legacy Life Lab uses tabular Q-learning and 2D Canvas. Living Planet v0.3 adds Three.js bodies and a separate small neural learner; it does not load or train Laya.
 
-**Network limitation in current build environment:** direct `git clone` from github.com could not resolve DNS. No downloaded Laya source or pretrained model weights are included or claimed.
+**Historical network limitation in the v0.2 build environment:** direct `git clone` from github.com could not resolve DNS. No downloaded Laya source or pretrained model weights are included or claimed.
 
 Do not mark these requirements as complete in Settings until real execution, reproducible tests, independent evaluation and visually inspectable agent behavior have been verified.

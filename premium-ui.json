@@ -1,0 +1,25 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": [
+    "."
+  ],
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": [
+    "Select/Listbox",
+    "Scrollbar"
+  ],
+  "ownership": {
+    "Select/Listbox": "native"
+  },
+  "commands": {
+    "unit": "npm test",
+    "browser": "npm run test:game:browser"
+  },
+  "requiredCommands": [
+    "unit",
+    "browser"
+  ],
+  "evidence": {
+    "failurePaths": "tests/browser/game.spec.mjs"
+  }
+}
