@@ -46,3 +46,15 @@ Authoritative sources: `docs/VERBATIM_ACTION_LIFE_SIMULATION_2026-10-24.md`, `do
 - New world requires confirmation and keeps the trained weights. It cannot silently discard replay. Imports validate before swapping the current runtime. Native file picker and select popups are intentional platform-owned controls.
 - Retention is bounded at 6,000 complete spatial snapshots. Capacity halts execution; it does not silently drop early frames. Export the session and create a new world to continue with retained weights.
 - Debug inspection is local and not an authentication or adversarial isolation boundary. No remote model, external tools, or user workstation is connected by this version.
+
+## v0.4 explorable world
+
+Authoritative request: `docs/verbatim/GAME_REJECTION_2026-10-25.md`. The game viewport is the primary scroll owner; World/checklist/travel overlays own their internal scrolling. Fullscreen sizing is intentional for play, not imposed to size a data table. Native buttons, selects, number inputs and dialogs remain canonical. Coordinate validation owns inline errors and focuses the invalid field. The block material popup intentionally uses platform-owned native select behavior.
+
+- `/` opens the 3D game; `infrastructure.html` preserves the original lab. Feature query parameters remain navigable.
+- Camera modes are Observe, Fly and Walk. Arbitrary coordinates and terrain streaming are independent of selected residents. Selecting Follow deliberately reattaches the camera; fly/walk and coordinate travel detach it.
+- New sessions live/learn immediately. Restored sessions pause. Pause stops residents/training but permits observer exploration. A pending human review remains an external decision; the visible Review action opens its panel.
+- Placed blocks obstruct residents and the walking observer. They do not silently replan routes or permit actions before arrival. New edits are forbidden during historical replay, human review and full replay capacity.
+- Block edits are append-only inverse-capable events with a world frame. Replay reconstructs historical blocks while retaining live state. Autosave/export includes exploration, camera and obstacles; failed validation preserves the current world.
+- Input releases on pointer cancellation, lost capture, focus loss and hidden document. Modal opening clears movement input. Touch movement has directional-button and keyboard alternatives.
+- The new four checklist entries are verified only within their stated sandbox scope. Existing broad 3D, model, society and Laya requirements retain partial/missing status.

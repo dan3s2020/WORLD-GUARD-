@@ -1,20 +1,32 @@
 import * as THREE from "three";
 import { CITIES, BUILDINGS } from "./sim/life.mjs";
-import { continents } from "./sim/geography.mjs";
+import { LAND_POLYGONS as continents } from "./sim/earth-land.mjs";
 import { buildingPoint } from "./sim/spatial-life.mjs";
-export const PLANET_RADIUS = 200;
+import {
+  EARTH_RADIUS,
+  BLOCK_SIZE,
+  MATERIALS,
+  coordinates,
+  terrainAt,
+  blockAddress,
+  validateExploration,
+  surfaceDistance,
+} from "./sim/planet-world.mjs";
+import { createTerrain } from "./game-terrain.mjs";
+import { createExplorer } from "./game-explorer.mjs";
+export const PLANET_RADIUS = EARTH_RADIUS;
 export const ZOOM_LEVELS = Object.freeze({
   planet: 0,
-  city: 0.44,
-  building: 0.72,
-  apartment: 0.86,
+  city: 0.59,
+  building: 0.8,
+  apartment: 0.91,
   agent: 1,
 });
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export function cameraDistance(zoom, aspect = 1) {
   return (
     Math.exp(
-      Math.log(1300) + (Math.log(1.2) - Math.log(1300)) * clamp(zoom, 0, 1),
+      Math.log(26000) + (Math.log(1.2) - Math.log(26000)) * clamp(zoom, 0, 1),
     ) *
     (1 + Math.max(0, 1 / aspect - 1) * Math.max(0, 1 - zoom / 0.4))
   );
@@ -28,20 +40,23 @@ export function latLonVector(lat, lon, r = PLANET_RADIUS) {
     -r * Math.cos(a) * Math.sin(b),
   );
 }
-export function createGameScene(canvas, { onPick, onZoom } = {}) {
+export function createGameScene(
+  canvas,
+  { onPick, onZoom, onEdit, onNotice, onObstacles } = {},
+) {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
     alpha: false,
     powerPreference: "high-performance",
   });
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
   renderer.setClearColor(0x080f1d);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.3;
   const scene = new THREE.Scene(),
-    camera = new THREE.PerspectiveCamera(48, 1, 0.03, 8000);
+    camera = new THREE.PerspectiveCamera(58, 1, 0.03, 60000);
   scene.add(new THREE.HemisphereLight(0xc8e8ff, 0x365a43, 2.6));
   const sun = new THREE.DirectionalLight(0xffe5b8, 3);
   sun.position.set(1000, 1300, 1500);
@@ -50,25 +65,11 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
   texture.width = 2048;
   texture.height = 1024;
   const g = texture.getContext("2d");
-  g.fillStyle = "#235679";
+  g.fillStyle = "#236e9b";
   g.fillRect(0, 0, 2048, 1024);
-  g.strokeStyle = "#548498";
-  g.lineWidth = 1;
-  for (let x = 0; x < 2048; x += 2048 / 24) {
-    g.beginPath();
-    g.moveTo(x, 0);
-    g.lineTo(x, 1024);
-    g.stroke();
-  }
-  for (let y = 0; y < 1024; y += 1024 / 12) {
-    g.beginPath();
-    g.moveTo(0, y);
-    g.lineTo(2048, y);
-    g.stroke();
-  }
-  g.fillStyle = "#518a77";
-  g.strokeStyle = "#83ac8e";
-  g.lineWidth = 2;
+  g.fillStyle = "#72965d";
+  g.strokeStyle = "#a4b67e";
+  g.lineWidth = 0.6;
   for (const shape of continents) {
     g.beginPath();
     shape.forEach(([lon, lat], i) =>
@@ -81,8 +82,39 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
     g.fill();
     g.stroke();
   }
+  g.save();
+  g.beginPath();
+  for (const shape of continents) {
+    shape.forEach(([lon, lat], i) =>
+      g[i ? "lineTo" : "moveTo"](
+        ((lon + 180) / 360) * 2048,
+        ((90 - lat) / 180) * 1024,
+      ),
+    );
+    g.closePath();
+  }
+  g.clip();
+  for (const [top, bottom, color] of [
+    [14, 31, "#b4a26b"],
+    [-31, -19, "#9c985e"],
+    [-12, 12, "#3b7553"],
+    [58, 90, "#a8b89e"],
+    [-90, -60, "#d6e6e3"],
+  ]) {
+    g.fillStyle = color;
+    g.fillRect(
+      0,
+      ((90 - bottom) / 180) * 1024,
+      2048,
+      ((bottom - top) / 180) * 1024,
+    );
+  }
+  g.restore();
+  g.fillStyle = "#d6e6e3";
+  g.fillRect(0, 0, 2048, 45);
+  g.fillRect(0, 930, 2048, 94);
   const planet = new THREE.Mesh(
-    new THREE.SphereGeometry(PLANET_RADIUS, 128, 96),
+    new THREE.SphereGeometry(PLANET_RADIUS - 1, 192, 128),
     new THREE.MeshStandardMaterial({
       map: new THREE.CanvasTexture(texture),
       roughness: 0.95,
@@ -91,7 +123,7 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
   );
   scene.add(planet);
   const atmosphere = new THREE.Mesh(
-    new THREE.SphereGeometry(202, 64, 48),
+    new THREE.SphereGeometry(PLANET_RADIUS * 1.012, 64, 48),
     new THREE.MeshBasicMaterial({
       color: 0x69b6dc,
       transparent: true,
@@ -108,7 +140,7 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
       (st = (Math.imul(st, 1664525) + 1013904223) >>> 0) / 4294967296;
     const a = rnd() * Math.PI * 2,
       z = rnd() * 2 - 1,
-      r = 2200 + rnd() * 700;
+      r = 33000 + rnd() * 5000;
     stars.push(
       Math.sqrt(1 - z * z) * Math.cos(a) * r,
       z * r,
@@ -122,7 +154,7 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
       starGeo,
       new THREE.PointsMaterial({
         color: 0xacc9dd,
-        size: 1.5,
+        size: 16,
         sizeAttenuation: true,
       }),
     ),
@@ -216,6 +248,10 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
           box(group, -1.4, y + 1.3, 2.1, 1.1, 2.4, 0.15, color, pick),
           box(group, 1.4, y + 1.3, 2.1, 1.1, 2.4, 0.15, color, pick),
         );
+        for (const x of [-1.4, 1.4])
+          shell.push(
+            box(group, x, y + 1.45, 2.19, 0.65, 0.85, 0.04, 0x4e788d, pick),
+          );
         // Furnishings have volume and remain present in the cutaway.
         if (b.kind === "home") {
           box(group, -0.9, y + 0.4, -1.05, 1.3, 0.65, 1.7, 0x344b70);
@@ -262,7 +298,39 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
       crown.position.set(x, 1.8, z);
       root.add(crown);
     }
-    districts.set(city.id, { root, normal, beacon, cityLabel, structures });
+    const gridLightMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffa14e,
+      emissive: 0xff8535,
+      emissiveIntensity: 0.4,
+    });
+    const gridLight = new THREE.Mesh(
+      new THREE.BoxGeometry(0.7, 0.7, 0.7),
+      gridLightMaterial,
+    );
+    gridLight.position.set(-20, 2.8, -3);
+    root.add(gridLight);
+    box(root, -20, 1.2, -3, 1.3, 2.4, 1.3, 0x5a6e77);
+    for (const z of [-8, 0, 8]) {
+      box(root, -20, 2, z, 0.2, 4, 0.2, 0x77634a);
+      box(root, -20, 3.6, z, 2, 0.1, 0.12, 0x3d4d55);
+    }
+    box(root, -20, 3.65, 0, 0.08, 0.08, 19, 0x324953);
+    const hospital = structures.get("B-01").group;
+    box(hospital, 0, 5.45, 0, 1.4, 0.16, 0.4, 0xe1e7de);
+    box(hospital, 0, 5.45, 0, 0.4, 0.16, 1.4, 0xe1e7de);
+    const hospitalLabel = label("HOSPITAL", "#ffc47c", 4.5);
+    hospitalLabel.position.set(-15, 6.3, -8);
+    root.add(hospitalLabel);
+    districts.set(city.id, {
+      root,
+      normal,
+      beacon,
+      cityLabel,
+      structures,
+      gridLight,
+      gridLightMaterial,
+      hospitalLabel,
+    });
   }
   const headGeo = new THREE.SphereGeometry(0.16, 12, 10),
     bodyGeo = new THREE.CapsuleGeometry(0.15, 0.32, 4, 8),
@@ -308,26 +376,89 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
     new THREE.MeshBasicMaterial({ color: 0x4ae1f3 }),
   );
   selection.rotation.x = -Math.PI / 2;
-  let zoom = 0.1,
-    targetZoom = 0.1,
-    cityId = "eu",
+  let cityId = "eu",
     agentId = "AG-0001",
     buildingId = null,
-    azimuth = 0.6,
-    polar = 0.78,
-    panX = 0,
-    panZ = 0,
+    apartmentFloor = 1,
     snapshot = null,
     disposed = false;
-  let apartmentFloor = 1;
-  let tracking = true,
-    frozenPosition = null;
-  let pointerStart = null,
-    pointers = new Map(),
-    pinchStart = null,
-    dragged = false;
-  const raycaster = new THREE.Raycaster(),
-    mouse = new THREE.Vector2();
+  let editing = null,
+    material = "grass",
+    edits = [],
+    replayFrame = null,
+    built = new Map(),
+    lastEditRevision = "",
+    interaction = null;
+  const terrain = createTerrain(scene, latLonVector),
+    blockRoot = new THREE.Group();
+  scene.add(blockRoot);
+  const blockGeo = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE),
+    raycaster = new THREE.Raycaster();
+  const sky = new THREE.Color(0xb8d3df),
+    space = new THREE.Color(0x080f1d);
+  function ground(lat, lon) {
+    let floor = Math.max(0, terrain.sample(lat, lon));
+    for (const block of built.values()) {
+      const e = block.userData.block;
+      if (
+        surfaceDistance({ lat, lon }, e) < 1.35 &&
+        camera.position.length() - PLANET_RADIUS > e.height + BLOCK_SIZE + 0.5
+      )
+        floor = Math.max(floor, e.height + BLOCK_SIZE);
+    }
+    return floor;
+  }
+  function solid(point, height) {
+    for (const d of districts.values()) {
+      if (point.distanceTo(d.root.position) > 32) continue;
+      const p = d.root.worldToLocal(point.clone());
+      if (p.y - height > 5.2 || p.y < 0.2) continue;
+      for (const b of BUILDINGS) {
+        const c = buildingPoint(b.id),
+          x = p.x - c.x,
+          z = p.z - c.z;
+        if (Math.abs(x) > 2.25 || Math.abs(z) > 2.4) continue;
+        if (Math.abs(x) > 1.63 || z < -1.75 || (z > 1.75 && Math.abs(x) > 0.65))
+          return true;
+      }
+    }
+    for (const block of built.values()) {
+      if (point.distanceTo(block.position) > 5) continue;
+      const p = block.worldToLocal(point.clone());
+      if (
+        Math.abs(p.x) < 1.28 &&
+        Math.abs(p.z) < 1.28 &&
+        p.y - height < 1 &&
+        p.y > -0.95
+      )
+        return true;
+    }
+    return false;
+  }
+  const explorer = createExplorer(canvas, camera, {
+    vector: latLonVector,
+    distance: cameraDistance,
+    onZoom,
+    ground,
+    solid,
+    spawnWalk(lat, lon) {
+      const c = CITIES.find((c) => surfaceDistance({ lat, lon }, c) < 30);
+      return c ? localPoint(c.id, { x: 0, y: 0.92, z: -13 }) : null;
+    },
+    followTarget(zoom) {
+      const actor = snapshot?.actors.find((a) => a.id === agentId),
+        d = districts.get(cityId);
+      if (!actor || !d) return null;
+      const p = buildingId ? buildingPoint(buildingId, apartmentFloor) : actor;
+      const mix = clamp((zoom - 0.58) / 0.15, 0, 1);
+      return new THREE.Vector3(p.x * mix, p.y * mix + 0.8, p.z * mix)
+        .applyQuaternion(d.root.quaternion)
+        .add(d.root.position);
+    },
+    onPick(mouse) {
+      pick(mouse);
+    },
+  });
   function resize() {
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
@@ -338,26 +469,35 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(canvas);
   resize();
-  function setZoom(value, { immediate = false } = {}) {
-    targetZoom = clamp(value, 0, 1);
-    if (immediate) zoom = targetZoom;
-    onZoom?.(targetZoom);
+  function localPoint(city, p) {
+    const d = districts.get(city);
+    return new THREE.Vector3(p.x, p.y + 0.8, p.z)
+      .applyQuaternion(d.root.quaternion)
+      .add(d.root.position);
   }
   function focusCity(id, value = ZOOM_LEVELS.city) {
     if (!districts.has(id)) return;
     cityId = id;
     buildingId = null;
-    panX = panZ = 0;
-    setZoom(value);
+    explorer.setFollow(false);
+    explorer.focus(localPoint(id, { x: 0, y: 0, z: 0 }), value);
   }
   function focusAgent(id, value = ZOOM_LEVELS.apartment) {
-    const a = snapshot?.world.agents.find((a) => a.id === id);
-    if (!a) return;
+    const a = snapshot?.world.agents.find((a) => a.id === id),
+      actor = snapshot?.actors.find((a) => a.id === id);
+    if (!a || !actor) return;
     agentId = id;
     cityId = a.city;
     buildingId = null;
-    panX = panZ = 0;
-    setZoom(value);
+    explorer.focus(localPoint(cityId, actor), value);
+  }
+  function focusBuilding(id, city = cityId) {
+    if (!districts.get(city)?.structures.has(id)) return;
+    cityId = city;
+    buildingId = id;
+    apartmentFloor = 1;
+    explorer.setFollow(false);
+    explorer.focus(localPoint(city, buildingPoint(id)), ZOOM_LEVELS.building);
   }
   function focusApartment(id) {
     const a = snapshot?.world.agents.find((a) => a.id === id);
@@ -366,16 +506,11 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
     cityId = a.city;
     buildingId = a.building;
     apartmentFloor = a.apartment;
-    panX = panZ = 0;
-    setZoom(ZOOM_LEVELS.apartment);
-  }
-  function focusBuilding(id, city = cityId) {
-    apartmentFloor = 1;
-    if (!districts.get(city)?.structures.has(id)) return;
-    cityId = city;
-    buildingId = id;
-    panX = panZ = 0;
-    setZoom(ZOOM_LEVELS.building);
+    explorer.setFollow(false);
+    explorer.focus(
+      localPoint(cityId, buildingPoint(buildingId, apartmentFloor)),
+      ZOOM_LEVELS.apartment,
+    );
   }
   function update(frame, selected) {
     snapshot = frame;
@@ -391,7 +526,26 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
       v.limbs[1].rotation.x = -walk;
       v.limbs[2].rotation.x = -walk;
       v.limbs[3].rotation.x = a.actingUntil > frame.time ? -1 : walk;
-      v.tag.visible = zoom > 0.35 && a.city === cityId;
+      const resident = frame.world.agents[i],
+        last = resident?.history.at(-1);
+      v.tag.visible = false;
+      if (v.tag.userData.action !== last?.action) {
+        v.tag.userData.action = last?.action;
+        if (v.bubble) {
+          v.bubble.material.map.dispose();
+          v.bubble.material.dispose();
+          v.bubble.removeFromParent();
+        }
+        if (last) {
+          v.bubble = label(
+            last.action,
+            last.reward < 0 ? "#fa7783" : "#77d9b1",
+            2.4,
+          );
+          v.bubble.position.y = 2;
+          v.root.add(v.bubble);
+        }
+      }
     }
     for (const [id, v] of avatars)
       if (!frame.actors.some((a) => a.id === id)) {
@@ -399,214 +553,319 @@ export function createGameScene(canvas, { onPick, onZoom } = {}) {
         avatars.delete(id);
       }
   }
+  function rebuildBlocks() {
+    const key = edits.length + ":" + replayFrame;
+    if (lastEditRevision === key) return;
+    lastEditRevision = key;
+    for (const m of built.values()) m.removeFromParent();
+    built.clear();
+    const active = new Map();
+    for (const e of edits) {
+      if (replayFrame !== null && e.frame > replayFrame) break;
+      if (e.action === "place") active.set(e.key, e);
+      else active.delete(e.key);
+    }
+    for (const [key, e] of active) {
+      const m = new THREE.Mesh(blockGeo, mat(MATERIALS[e.material]));
+      m.position.copy(
+        latLonVector(e.lat, e.lon, PLANET_RADIUS + e.height + BLOCK_SIZE / 2),
+      );
+      m.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 1, 0),
+        latLonVector(e.lat, e.lon, 1),
+      );
+      m.userData.block = e;
+      m.userData.pick = { kind: "block", key };
+      blockRoot.add(m);
+      built.set(key, m);
+    }
+    blockRoot.updateMatrixWorld(true);
+  }
+  function visible(object) {
+    for (let p = object; p; p = p.parent) {
+      if (!p.visible) return false;
+      if (p === scene) return true;
+    }
+    return false;
+  }
+  function cast(mouse = new THREE.Vector2()) {
+    raycaster.setFromCamera(mouse, camera);
+    const objects = [
+      ...pickables.filter(visible),
+      ...terrain.pickables(),
+      ...built.values(),
+      planet,
+    ];
+    return raycaster.intersectObjects(objects, false)[0] || null;
+  }
+  function addEdit(address, action, chosenMaterial = material) {
+    if (replayFrame !== null) {
+      onNotice?.("Return to Live before changing the world.");
+      return false;
+    }
+    if (edits.length >= 12000 || (action === "place" && built.size >= 4096)) {
+      onNotice?.("Block capacity reached. Export this world to preserve it.");
+      return false;
+    }
+    const frame = onEdit
+      ? onEdit({ action, ...address, material: chosenMaterial })
+      : 0;
+    if (frame === null) {
+      onNotice?.(
+        "The world is waiting for review or its replay is full. Resolve this before building.",
+      );
+      return false;
+    }
+    edits.push({ ...address, action, material: chosenMaterial, frame });
+    rebuildBlocks();
+    const obstacles = [];
+    for (const block of built.values())
+      for (const [id, d] of districts) {
+        if (block.position.distanceTo(d.root.position) > 40) continue;
+        const p = d.root.worldToLocal(block.position.clone());
+        obstacles.push({ city: id, x: p.x, y: p.y - 1, z: p.z });
+      }
+    onObstacles?.(obstacles);
+    return true;
+  }
+  function editHit(hit) {
+    if (!hit || hit.distance > 180) {
+      onNotice?.("Move closer to the ground or a block.");
+      return false;
+    }
+    const block = hit.object.userData.block;
+    if (editing === "remove") {
+      if (!block) {
+        onNotice?.("Aim at a block you placed to remove it.");
+        return false;
+      }
+      return addEdit(block, "remove", block.material);
+    }
+    if (hit.object.userData.pick && !block) {
+      onNotice?.("Build on the terrain beside the existing buildings.");
+      return false;
+    }
+    const p = hit.point.clone();
+    if (block) {
+      const normal = hit.face.normal
+        .clone()
+        .transformDirection(hit.object.matrixWorld);
+      p.addScaledVector(normal, BLOCK_SIZE * 0.6);
+    } else p.addScaledVector(p.clone().normalize(), 0.08);
+    const geo = coordinates(p.x, p.y, p.z),
+      h = block
+        ? Math.floor((p.length() - PLANET_RADIUS) / BLOCK_SIZE) * BLOCK_SIZE
+        : Math.ceil(ground(geo.lat, geo.lon) / BLOCK_SIZE) * BLOCK_SIZE;
+    const address = blockAddress(geo.lat, geo.lon, h);
+    if (built.has(address.key)) {
+      onNotice?.("That space already contains a block.");
+      return false;
+    }
+    const center = latLonVector(
+      address.lat,
+      address.lon,
+      PLANET_RADIUS + address.height + 1,
+    );
+    if (center.distanceTo(camera.position) < 2) {
+      onNotice?.("Leave room around yourself before placing a block.");
+      return false;
+    }
+    return addEdit(address, "place");
+  }
+  function pick(mouse) {
+    const hit = cast(mouse);
+    if (!hit) return;
+    if (editing) {
+      editHit(hit);
+      return;
+    }
+    const p = hit.object.userData.pick;
+    if (p && p.kind !== "block") {
+      onPick?.(p);
+      return;
+    }
+    const geo = coordinates(hit.point.x, hit.point.y, hit.point.z);
+    if (explorer.state().mode === "orbit") {
+      explorer.travel(geo.lat, geo.lon, ZOOM_LEVELS.city);
+      onNotice?.(
+        "Exploring " +
+          geo.lat.toFixed(2) +
+          "°, " +
+          geo.lon.toFixed(2) +
+          "°. Fly or walk to move freely.",
+      );
+    }
+  }
   function render(dt = 0.016) {
     if (disposed) return;
-    zoom += (targetZoom - zoom) * (1 - Math.exp(-dt * 9));
-    const district = districts.get(cityId),
-      actor = snapshot?.actors.find((a) => a.id === agentId),
-      chosen = snapshot?.world.agents.find((a) => a.id === agentId);
-    let local = new THREE.Vector3(panX, 0.8, panZ);
-    if (zoom > 0.5) {
-      const mix = clamp((zoom - 0.5) / 0.2, 0, 1);
-      let p = buildingId
-        ? buildingPoint(buildingId, apartmentFloor)
-        : !tracking && frozenPosition
-          ? frozenPosition
-          : actor?.city === cityId
-            ? actor
-            : { x: 0, y: 0.2, z: 0 };
-      local.lerp(new THREE.Vector3(p.x + panX, p.y + 0.7, p.z + panZ), mix);
+    explorer.update(dt);
+    const view = explorer.state(),
+      near = view.altitude < 450;
+    terrain.update(view.lat, view.lon, view.altitude);
+    rebuildBlocks();
+    scene.background = near ? sky : space;
+    scene.fog = near ? new THREE.Fog(0xb8d3df, 110, 235) : null;
+    atmosphere.visible = !near;
+    planet.visible = true;
+    let nearest = null,
+      nearestDistance = Infinity;
+    for (const c of CITIES) {
+      const dist = surfaceDistance(view, c);
+      if (dist < nearestDistance) {
+        nearest = c;
+        nearestDistance = dist;
+      }
     }
-    const surface = local
-      .applyQuaternion(district.root.quaternion)
-      .add(district.root.position);
-    const blend = clamp(zoom / 0.32, 0, 1);
-    const target = surface.multiplyScalar(blend * blend * (3 - 2 * blend));
-    const offset = new THREE.Vector3(
-      Math.sin(azimuth) * Math.sin(polar),
-      Math.cos(polar),
-      Math.cos(azimuth) * Math.sin(polar),
-    ).applyQuaternion(district.root.quaternion);
-    camera.position
-      .copy(target)
-      .addScaledVector(offset, cameraDistance(zoom, camera.aspect));
-    camera.up.copy(district.normal);
-    camera.lookAt(target);
-    camera.near = zoom < 0.25 ? 0.5 : 0.025;
-    camera.updateProjectionMatrix();
+    const actor = snapshot?.actors.find((a) => a.id === agentId);
     for (const [id, d] of districts) {
-      d.beacon.visible = zoom < 0.36;
-      d.cityLabel.visible = zoom < 0.36;
-      const localView = id === cityId;
+      const localDistance = camera.position.distanceTo(d.root.position),
+        localView = localDistance < 500;
+      d.beacon.visible = !near;
+      d.cityLabel.visible = !near;
+      const hospitalHistory =
+        snapshot?.world.agents
+          .filter((a) => a.city === id)
+          .flatMap((a) => a.history)
+          .filter((h) => h.scenario === "hospital") || [];
+      const powered = hospitalHistory.some((h) =>
+        ["repair", "approved_reroute"].includes(h.action),
+      );
+      d.gridLightMaterial.color.setHex(powered ? 0x77d9b1 : 0xffa14e);
+      d.gridLightMaterial.emissive.setHex(powered ? 0x77d9b1 : 0xff8535);
+      d.gridLightMaterial.emissiveIntensity = powered
+        ? 0.7
+        : 0.25 + Math.sin((snapshot?.time || 0) * 3) * 0.2;
+      d.cityLabel.scale.set(300, 56.25, 1);
+      d.cityLabel.position.y = 130;
+      d.beacon.scale.setScalar(25);
       for (const child of d.root.children)
         if (child !== d.beacon && child !== d.cityLabel)
-          child.visible = localView && zoom > 0.23;
+          child.visible = localView;
+      d.hospitalLabel.visible = localView && view.mode === "orbit";
+      const close = localDistance < 22;
       for (const [bid, b] of d.structures) {
-        b.label.visible = localView && zoom > 0.28 && zoom < 0.85;
         const cutaway =
           localView &&
-          zoom > 0.63 &&
+          view.mode === "orbit" &&
+          view.zoom > 0.77 &&
+          id === cityId &&
           (buildingId
             ? bid === buildingId
-            : bid === (actor?.destination || chosen?.building));
+            : bid ===
+              (actor?.destination ||
+                snapshot?.world.agents.find((a) => a.id === agentId)
+                  ?.building));
         const floor = buildingId
           ? apartmentFloor - 1
           : Math.max(0, Math.round((actor?.y || 0) / 2.5));
-        for (const child of b.group.children)
+        for (const child of b.group.children) {
           child.visible = !(
             cutaway &&
-            zoom > 0.75 &&
+            view.zoom > 0.86 &&
             child.position.y > (floor + 1) * 2.5 - 0.1
           );
-        b.label.visible = localView && zoom > 0.28 && zoom < 0.85;
+          if (!child.userData.pick && !child.isSprite)
+            child.visible = child.visible && (close || cutaway);
+        }
         b.roof.visible = !cutaway;
-        for (const m of b.shell) m.visible = !(cutaway && zoom > 0.75);
+        for (const m of b.shell) m.visible = !(cutaway && view.zoom > 0.86);
+        b.label.visible =
+          localView &&
+          view.mode === "orbit" &&
+          view.zoom > 0.5 &&
+          view.zoom < 0.87;
       }
+    }
+    for (const [id, v] of avatars) {
+      v.tag.visible =
+        id === agentId &&
+        camera.position.distanceTo(
+          v.root.getWorldPosition(new THREE.Vector3()),
+        ) < 40;
+      if (v.bubble)
+        v.bubble.visible =
+          camera.position.distanceTo(
+            v.root.getWorldPosition(new THREE.Vector3()),
+          ) < 25;
     }
     if (actor) {
-      const av = avatars.get(actor.id);
-      av?.root.add(selection);
+      avatars.get(actor.id)?.root.add(selection);
       selection.position.y = 0.03;
-      selection.visible = zoom > 0.35;
+      selection.visible = near;
     }
+    const hit = near ? cast() : null;
+    interaction = hit?.object.userData.pick || null;
     renderer.render(scene, camera);
     return {
-      zoom,
-      targetZoom,
-      distance: cameraDistance(zoom, camera.aspect),
-      city: cityId,
-      target: target.toArray(),
-      tracking,
-      level:
-        zoom < 0.3
-          ? "planet"
-          : zoom < 0.62
-            ? "city"
-            : zoom < 0.8
-              ? "building"
-              : zoom < 0.95
-                ? "apartment"
-                : "agent",
+      ...view,
+      city: nearestDistance < 130 ? nearest.id : null,
+      biome: terrainAt(view.lat, view.lon).biome,
       triangles: renderer.info.render.triangles,
+      drawCalls: renderer.info.render.calls,
+      ...terrain.stats(),
+      blocks: built.size,
+      editing,
+      interaction,
     };
   }
-  function pick(x, y) {
-    const r = canvas.getBoundingClientRect();
-    mouse.set(
-      ((x - r.left) / r.width) * 2 - 1,
-      (-(y - r.top) / r.height) * 2 + 1,
-    );
-    raycaster.setFromCamera(mouse, camera);
-    const hit = raycaster
-      .intersectObjects(pickables, false)
-      .find((h) => h.object.visible && h.object.parent?.visible);
-    if (hit) onPick?.(hit.object.userData.pick);
-  }
-  const handlers = {
-    pointerdown: (e) => {
-      canvas.focus({ preventScroll: true });
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      canvas.setPointerCapture(e.pointerId);
-      if (pointers.size === 1) {
-        pointerStart = { x: e.clientX, y: e.clientY, azimuth, polar };
-        dragged = false;
-      } else if (pointers.size === 2) {
-        const [a, b] = [...pointers.values()];
-        pinchStart = {
-          distance: Math.hypot(a.x - b.x, a.y - b.y),
-          zoom: targetZoom,
-        };
-        dragged = true;
-      }
-    },
-    pointermove: (e) => {
-      if (!pointers.has(e.pointerId)) return;
-      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pointers.size === 2 && pinchStart) {
-        const [a, b] = [...pointers.values()];
-        setZoom(
-          pinchStart.zoom +
-            Math.log(Math.hypot(a.x - b.x, a.y - b.y) / pinchStart.distance) *
-              0.18,
-        );
-      } else if (pointerStart && pointers.size === 1) {
-        const dx = e.clientX - pointerStart.x,
-          dy = e.clientY - pointerStart.y;
-        if (Math.hypot(dx, dy) > 5) dragged = true;
-        azimuth = pointerStart.azimuth - dx * 0.006;
-        polar = clamp(pointerStart.polar + dy * 0.006, 0.06, 1.43);
-      }
-    },
-    pointerup: (e) => {
-      const click = pointers.size === 1 && !dragged;
-      pointers.delete(e.pointerId);
-      pointerStart = null;
-      pinchStart = null;
-      if (click) pick(e.clientX, e.clientY);
-    },
-    pointercancel: () => {
-      pointers.clear();
-      pointerStart = null;
-      pinchStart = null;
-    },
-    wheel: (e) => {
-      e.preventDefault();
-      setZoom(targetZoom - e.deltaY * 0.0004);
-    },
-    keydown: (e) => {
-      if (
-        [
-          "ArrowLeft",
-          "ArrowRight",
-          "ArrowUp",
-          "ArrowDown",
-          "+",
-          "-",
-          "=",
-          "Home",
-          "End",
-        ].includes(e.key)
-      )
-        e.preventDefault();
-      if (e.key === "ArrowLeft") azimuth -= 0.12;
-      if (e.key === "ArrowRight") azimuth += 0.12;
-      if (e.key === "ArrowUp") polar = clamp(polar - 0.1, 0.06, 1.43);
-      if (e.key === "ArrowDown") polar = clamp(polar + 0.1, 0.06, 1.43);
-      if (e.key === "+" || e.key === "=") setZoom(targetZoom + 0.04);
-      if (e.key === "-") setZoom(targetZoom - 0.04);
-      if (e.key === "Home") setZoom(0);
-      if (e.key === "End") setZoom(1);
-    },
-  };
-  for (const [name, handler] of Object.entries(handlers))
-    canvas.addEventListener(
-      name,
-      handler,
-      name === "wheel" ? { passive: false } : undefined,
-    );
+  focusCity("eu");
   return {
-    setFollow: (value) => {
-      tracking = !!value;
-      const a = snapshot?.actors.find((a) => a.id === agentId);
-      frozenPosition = a ? { x: a.x, y: a.y, z: a.z } : null;
-    },
-    setZoom,
+    setFollow: explorer.setFollow,
+    setZoom: explorer.setZoom,
+    zoom: explorer.zoom,
+    rotate: explorer.rotate,
     focusCity,
     focusAgent,
     focusBuilding,
     focusApartment,
     update,
     render,
-    zoom: () => targetZoom,
-    rotate: (x, y) => {
-      azimuth += x;
-      polar = clamp(polar + y, 0.06, 1.43);
+    travel: explorer.travel,
+    setMode: explorer.setMode,
+    setMove: explorer.setMove,
+    jump: explorer.jump,
+    clearInput: explorer.clearInput,
+    setTool(value, chosen = material) {
+      editing = value;
+      material = Object.hasOwn(MATERIALS, chosen) ? chosen : material;
     },
-    dispose: () => {
+    interact() {
+      const hit = cast();
+      if (editing) return editHit(hit);
+      if (hit?.object.userData.pick) onPick?.(hit.object.userData.pick);
+      else onNotice?.("Aim at a resident or building to inspect it.");
+    },
+    undo() {
+      const last = edits.at(-1);
+      if (last)
+        return addEdit(
+          last,
+          last.action === "place" ? "remove" : "place",
+          last.material,
+        );
+      return false;
+    },
+    setReplay(frame) {
+      replayFrame = frame;
+      rebuildBlocks();
+    },
+    exportState: () => ({
+      format: "worldguard-exploration-v1",
+      camera: explorer.exportState(),
+      edits: edits.map((e) => ({ ...e })),
+    }),
+    restoreState(value) {
+      const state = validateExploration(value);
+      edits = state.edits;
+      lastEditRevision = "";
+      rebuildBlocks();
+      explorer.restore(state.camera);
+    },
+    dispose() {
       disposed = true;
       resizeObserver.disconnect();
-      for (const [name, h] of Object.entries(handlers))
-        canvas.removeEventListener(name, h);
+      explorer.dispose();
+      terrain.dispose();
       renderer.dispose();
     },
     get renderer() {

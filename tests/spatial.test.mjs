@@ -22,7 +22,7 @@ test("3D globe positions are on a sphere; zoom has finite usable extrema and ada
     [-33.8, 151.2],
   ])
     assert.ok(Math.abs(latLonVector(a, b).length() - PLANET_RADIUS) < 1e-8);
-  assert.equal(cameraDistance(0, 1), 1300);
+  assert.ok(Math.abs(cameraDistance(0, 1) - 26000) < 1e-8);
   assert.ok(Math.abs(cameraDistance(1, 0.5) - 1.2) < 1e-9);
   assert.ok(cameraDistance(0, 0.5) > cameraDistance(0, 2));
 });

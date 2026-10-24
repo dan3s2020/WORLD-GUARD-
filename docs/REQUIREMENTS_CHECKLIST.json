@@ -1,11 +1,12 @@
 {
   "project": "WORLD GUARD",
-  "releaseTarget": "Living Planet 3D v0.3 corrective acceptance",
+  "releaseTarget": "Earth sandbox v0.4 — game-first world acceptance",
   "verificationPolicy": "Only status=verified may render a checked checkbox or jump-to-feature button. Verified means a narrow demonstrated prototype capability, not the requested complete game.",
   "sources": {
     "foundation": "docs/CONVERSATION_VERBATIM_2026-10-24.md",
     "life": "docs/VERBATIM_ACTION_LIFE_SIMULATION_2026-10-24.md",
-    "feedback": "docs/verbatim/FEEDBACK_LIFE_LAB_V0.2_2026-10-25.md"
+    "feedback": "docs/verbatim/FEEDBACK_LIFE_LAB_V0.2_2026-10-25.md",
+    "sandbox": "docs/verbatim/GAME_REJECTION_2026-10-25.md"
   },
   "requirements": [
     {
@@ -24,7 +25,7 @@
       "source": "foundation",
       "status": "partial",
       "target": "globe",
-      "evidence": "play.html adds a real perspective 3D world, bodies, furnishings and routed locomotion. General physics and rich gameplay remain incomplete."
+      "evidence": "play.html is now a full-screen sandbox with free flight, first-person walking/jumping, streamed terrain, block placement/removal and moving residents. General-purpose physical interactions and richer task worlds remain incomplete."
     },
     {
       "id": "WG-003",
@@ -33,7 +34,7 @@
       "source": "feedback",
       "status": "partial",
       "target": "game",
-      "evidence": "Three.js perspective sphere, meshes, orbit camera and moving 3D bodies in play.html. Locomotion follows deterministic waypoint routes; no general collision/physics engine."
+      "evidence": "Three.js globe and continuous camera, deterministic worldwide terrain streaming, walk/fly controls, gravity, wall/block collisions and resident route obstruction. This is a compressed procedural Earth sandbox, not a general physics engine."
     },
     {
       "id": "WG-004",
@@ -42,7 +43,7 @@
       "source": "feedback",
       "status": "partial",
       "target": "globe",
-      "evidence": "Desktop and 390px touch-layout browser tests pass for the 3D scene and zoom controls. Physical Android/iOS device performance is not yet verified."
+      "evidence": "The game owns the complete viewport. Browser tests exercise 390px touch pinch and joystick movement, landscape and keyboard controls. Physical Android/iOS performance still needs device testing."
     },
     {
       "id": "WG-005",
@@ -51,7 +52,7 @@
       "source": "foundation",
       "status": "partial",
       "target": "globe",
-      "evidence": "play.html renders a real 3D sphere with six georeferenced synthetic districts. Planet-wide economy, geography and civil dependencies remain absent."
+      "evidence": "Arbitrary coordinates are reachable across a compressed Earth-shaped globe with streamed grassland, highland, desert, snow and ocean scenery. Six districts contain persistent residents. Planet-wide society/economy and accurate Earth data remain incomplete."
     },
     {
       "id": "WG-006",
@@ -60,7 +61,7 @@
       "source": "life",
       "status": "verified",
       "target": "city",
-      "evidence": "Deterministic city-selection/view navigation in life-ui.mjs."
+      "evidence": "Earth button, globe picking and coordinate travel descend to arbitrary terrain or inhabited districts through the same perspective camera."
     },
     {
       "id": "WG-007",
@@ -109,7 +110,7 @@
     },
     {
       "id": "WG-012",
-      "title": "Seven o\u2019clock wake decision",
+      "title": "Seven o’clock wake decision",
       "requirement": "At 07:00, action selection includes wake now or sleep longer.",
       "source": "life",
       "status": "verified",
@@ -316,7 +317,7 @@
       "source": "life",
       "status": "verified",
       "target": "persistence",
-      "evidence": "play.html saves and restores complete worlds, spatial replay, weights, experience replay and RNG state via IndexedDB or JSON. Browser reload and deterministic continuation tests pass."
+      "evidence": "IndexedDB/JSON retains the world, neural weights, movement replay, camera, block edits and resident obstacles. Reload starts paused; tests verify geometry/model restore."
     },
     {
       "id": "WG-037",
@@ -325,7 +326,7 @@
       "source": "life",
       "status": "verified",
       "target": "replay",
-      "evidence": "Both legacy decision frames and new spatial movement/decision frames are replayable. Capacity halts the new session at 6,000 spatial frames rather than truncating history."
+      "evidence": "Movement, decisions and block edits are replayable by index without rewriting the live model/world. Capacity stops instead of dropping early frames. Motion sampling is every 0.5 simulated seconds, not every render frame."
     },
     {
       "id": "WG-038",
@@ -338,7 +339,7 @@
     },
     {
       "id": "WG-039",
-      "title": "God\u2019s Eye omniscient simulated observer",
+      "title": "God’s Eye omniscient simulated observer",
       "requirement": "Inspect complete simulated logs, states, decisions and causes.",
       "source": "life",
       "status": "partial",
@@ -449,7 +450,7 @@
       "source": "feedback",
       "status": "verified",
       "target": "game",
-      "evidence": "Three.js 0.186.1 is pinned, bundled locally and exercised in WebGL browser tests. Graphics runtime is separate from the neural policy."
+      "evidence": "Bundled Three.js WebGL perspective globe, streamed chunk meshes, avatar bodies, interiors, wall/block collision and camera controls; no runtime CDN."
     },
     {
       "id": "WG-052",
@@ -484,6 +485,42 @@
       "status": "partial",
       "target": "agent",
       "evidence": "36 independent profiles advance in lockstep, without meaningful causal multiagent interactions."
+    },
+    {
+      "id": "WG-056",
+      "title": "Explore arbitrary Earth coordinates",
+      "requirement": "The god-like observer can descend anywhere on the globe, beyond the six resident districts.",
+      "source": "sandbox",
+      "status": "verified",
+      "target": "explore",
+      "evidence": "Globe picking and validated latitude/longitude travel generate terrain around any visited point. Browser tests explore non-city coordinates and cross chunk boundaries."
+    },
+    {
+      "id": "WG-057",
+      "title": "Mobile movement inside the world",
+      "requirement": "Walk or fly through the 3D world using mobile controls, with camera look and ground movement.",
+      "source": "sandbox",
+      "status": "verified",
+      "target": "walk",
+      "evidence": "Touch joystick and directional alternatives, canvas look, free flight, first-person walking, jumping and keyboard controls. Browser tests send actual touch events and verify camera displacement."
+    },
+    {
+      "id": "WG-058",
+      "title": "Persistent block-building sandbox",
+      "requirement": "Minecraft-like placement and removal must change explorable geometry and persist/replay.",
+      "source": "sandbox",
+      "status": "verified",
+      "target": "build",
+      "evidence": "Place/remove/undo blocks. Blocks collide with the observer and obstruct resident routes. Browser tests verify creation, historical absence, live return and saved restoration."
+    },
+    {
+      "id": "WG-059",
+      "title": "Game-first default launch",
+      "requirement": "Opening the server root must enter the 3D game, with training details available on demand.",
+      "source": "sandbox",
+      "status": "verified",
+      "target": "game",
+      "evidence": "index.html routes to the full-viewport play.html. Training runs in the world; World/Lives/Replay open accessible overlays. The old dashboard is retained at infrastructure.html."
     }
   ]
 }

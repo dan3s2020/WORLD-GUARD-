@@ -630,3 +630,637 @@ dialog.requirements-dialog {
 p {
   margin: 8px 0;
 }
+
+/* The game owns the viewport; instrumentation is an explicitly opened overlay. */
+body.game {
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.game #game {
+  display: block;
+  position: fixed;
+  inset: 0;
+  max-width: none;
+  background: var(--bg);
+  isolation: isolate;
+}
+.game .viewport {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  min-height: 0;
+}
+.game .game-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: calc(14px + env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-right)) 14px
+    max(18px, env(safe-area-inset-left));
+  border: 0;
+  background: linear-gradient(#080f1dd9, transparent);
+  pointer-events: none;
+  justify-content: flex-start;
+  gap: 12px;
+}
+.game-header > * {
+  pointer-events: auto;
+}
+.game-header .brand {
+  font-size: 15px;
+  text-shadow: 0 1px 4px #000;
+  margin-right: auto;
+}
+.game-header .brand span {
+  color: var(--text);
+  font-size: 9px;
+}
+.game-header button {
+  background: #111d31dc;
+  backdrop-filter: blur(10px);
+  min-height: 44px;
+}
+.world-clock {
+  display: grid;
+  text-align: right;
+  font:
+    10px/1.8 ui-monospace,
+    monospace;
+  text-shadow: 0 1px 4px #000;
+}
+.world-clock #mode {
+  color: var(--cyan);
+}
+.navigation-readout {
+  position: absolute;
+  top: 94px;
+  left: max(20px, env(safe-area-inset-left));
+  display: grid;
+  gap: 4px;
+  color: var(--text);
+  font:
+    10px/1.6 ui-monospace,
+    monospace;
+  text-shadow: 0 1px 4px #000;
+  pointer-events: none;
+}
+.navigation-readout span {
+  width: fit-content;
+  padding: 3px 7px;
+  background: #111d31c9;
+  border-radius: 3px;
+}
+.view-controls {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  top: 110px;
+  display: grid;
+  gap: 7px;
+}
+.view-controls button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px;
+  background: #111d31ce;
+  font-size: 21px;
+}
+.game-dock {
+  position: absolute;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  background: #111d31ed;
+  border: 1px solid #94a9c14a;
+  border-radius: 13px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 26px #0003;
+}
+.game-dock button {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-width: 68px;
+  min-height: 58px;
+  background: transparent;
+  border-color: transparent;
+  font-size: 10px;
+  font-weight: 500;
+}
+.game-dock button > span {
+  font-size: 23px;
+  line-height: 1;
+}
+.game-dock button[aria-pressed="true"] {
+  background: #315467;
+  color: var(--cyan);
+  border-color: #4ae1f36b;
+}
+.game-dock button:hover {
+  background: #315467;
+}
+.world-footer {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: calc(94px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  pointer-events: none;
+  font:
+    10px/1.5 ui-monospace,
+    monospace;
+  text-shadow: 0 1px 4px #000;
+}
+.world-footer span {
+  background: #111d31d6;
+  padding: 4px 7px;
+  border-radius: 3px;
+}
+.resident-card {
+  position: absolute;
+  left: max(20px, env(safe-area-inset-left));
+  bottom: calc(150px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #111d31e8;
+  border: 1px solid #94a9c14a;
+  border-radius: 8px;
+  padding: 9px 10px;
+  max-width: calc(100% - 90px);
+}
+.resident-card > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.resident-card strong {
+  font:
+    600 11px/1.4 ui-monospace,
+    monospace;
+}
+.resident-card div span {
+  max-width: 230px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  color: var(--muted);
+}
+.resident-card button {
+  min-height: 36px;
+  font-size: 11px;
+}
+.resident-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--good);
+  border-radius: 50%;
+  box-shadow: 0 0 12px #77d9b14d;
+}
+.world-notice {
+  position: absolute;
+  top: calc(100px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(480px, calc(100% - 120px));
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  color: var(--text);
+  font-size: 12px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+#crosshair {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  pointer-events: none;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 2px #000);
+  opacity: 0.8;
+}
+#crosshair span {
+  position: absolute;
+  background: #fff;
+}
+#crosshair span:first-child {
+  width: 14px;
+  height: 2px;
+  top: 6px;
+}
+#crosshair span:last-child {
+  height: 14px;
+  width: 2px;
+  left: 6px;
+}
+.move-pad {
+  position: absolute;
+  bottom: calc(155px + env(safe-area-inset-bottom));
+  left: max(24px, env(safe-area-inset-left));
+  width: 138px;
+  height: 138px;
+  touch-action: none;
+}
+#joystick {
+  position: absolute;
+  inset: 21px;
+  border-radius: 50%;
+  background: #111d316b;
+  border: 1px solid #ebf5ff80;
+  padding: 0;
+  touch-action: none;
+}
+#joystick > span {
+  position: absolute;
+  width: 39px;
+  height: 39px;
+  top: 50%;
+  left: 50%;
+  margin: -19.5px;
+  border: 1px solid #ebf5ffb3;
+  background: #ebf5ff38;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.pad-direction {
+  position: absolute;
+  width: 34px;
+  min-height: 32px;
+  padding: 4px;
+  font-size: 12px;
+  border: 0;
+  background: #111d3180;
+  touch-action: none;
+}
+.pad-direction.forward {
+  left: 52px;
+  top: -7px;
+}
+.pad-direction.backward {
+  left: 52px;
+  bottom: -7px;
+}
+.pad-direction.left {
+  left: -7px;
+  top: 52px;
+}
+.pad-direction.right {
+  right: -7px;
+  top: 52px;
+}
+.vertical-pad {
+  position: absolute;
+  bottom: calc(150px + env(safe-area-inset-bottom));
+  right: max(22px, env(safe-area-inset-right));
+  display: grid;
+  grid-template-columns: repeat(2, 48px);
+  gap: 8px;
+}
+.vertical-pad button {
+  min-height: 48px;
+  padding: 4px;
+  background: #111d31c9;
+  touch-action: none;
+}
+.game[data-moving="true"] .resident-card {
+  bottom: auto;
+  top: 165px;
+  max-width: 260px;
+}
+.build-bar {
+  position: absolute;
+  bottom: calc(320px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: calc(100% - 30px);
+  padding: 8px;
+  background: #111d31ed;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.build-bar label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.build-bar select {
+  width: 85px;
+  margin: 0;
+}
+.build-bar button {
+  white-space: nowrap;
+}
+.build-bar [aria-pressed="true"] {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.build-bar #blockCountHud {
+  color: var(--muted);
+  font:
+    10px ui-monospace,
+    monospace;
+  white-space: nowrap;
+}
+dialog.game-console {
+  width: min(1120px, calc(100vw - 28px));
+  max-width: none;
+  max-height: 89dvh;
+  padding: 0;
+  border-radius: 12px;
+}
+.console-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 1px solid var(--line);
+}
+.console-heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.console-heading .eyebrow {
+  margin: 0 0 4px;
+}
+.console-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.console-grid > div {
+  min-width: 0;
+}
+.console-grid aside {
+  display: block;
+}
+.console-links {
+  padding: 10px 20px;
+  display: flex;
+  gap: 16px;
+  justify-content: flex-start;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.console-links a {
+  display: inline;
+}
+.console-links button {
+  margin-right: auto;
+}
+.console-grid .camera-tools {
+  padding: 18px;
+}
+.console-grid .camera-tools > .row {
+  gap: 7px;
+}
+.console-grid .zoom-row {
+  flex-wrap: wrap;
+}
+#travelForm input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 5px;
+  padding: 10px;
+  font:
+    16px ui-monospace,
+    monospace;
+}
+.game .startup {
+  z-index: 2;
+  pointer-events: none;
+}
+.game .game-header {
+  z-index: 3;
+}
+@media (max-width: 700px) {
+  .game .game-header {
+    padding: calc(12px + env(safe-area-inset-top)) 12px 12px;
+    gap: 7px;
+  }
+  .game-header .brand {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+  .game-header .brand span {
+    font-size: 7px;
+    letter-spacing: 0.09em;
+  }
+  .game-header button {
+    min-width: 44px;
+    padding: 7px;
+    font-size: 17px;
+  }
+  .game-header button span {
+    display: none;
+  }
+  .world-clock {
+    font-size: 8px;
+  }
+  .navigation-readout {
+    top: 85px;
+    left: 12px;
+    font-size: 9px;
+  }
+  .view-controls {
+    top: 115px;
+    right: 12px;
+    gap: 7px;
+  }
+  .view-controls button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .game-dock {
+    width: calc(100% - 18px);
+    gap: 0;
+    justify-content: space-around;
+    padding: 4px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    border-radius: 10px;
+  }
+  .game-dock button {
+    min-width: 0;
+    flex: 1;
+    min-height: 52px;
+    padding: 6px 1px;
+    font-size: 9px;
+  }
+  .game-dock button > span {
+    font-size: 21px;
+  }
+  .world-footer {
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    left: 12px;
+    right: 12px;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    font-size: 8px;
+  }
+  .world-footer #controlsHint {
+    width: 100%;
+    text-align: center;
+  }
+  .resident-card {
+    left: 12px;
+    bottom: calc(140px + env(safe-area-inset-bottom));
+    gap: 7px;
+    padding: 8px;
+  }
+  .resident-card div span {
+    max-width: 140px;
+    font-size: 10px;
+  }
+  .resident-card button {
+    padding: 6px 8px;
+  }
+  .game[data-moving="true"] .resident-card {
+    top: 145px;
+    max-width: calc(100% - 78px);
+  }
+  .game[data-moving="true"] .resident-card #hudFollow {
+    display: none;
+  }
+  .move-pad {
+    left: 24px;
+    bottom: calc(143px + env(safe-area-inset-bottom));
+    width: 122px;
+    height: 122px;
+  }
+  .pad-direction.forward,
+  .pad-direction.backward {
+    left: 44px;
+  }
+  .pad-direction.left,
+  .pad-direction.right {
+    top: 44px;
+  }
+  .vertical-pad {
+    right: 18px;
+    bottom: calc(145px + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(2, 44px);
+  }
+  .vertical-pad button {
+    min-height: 44px;
+    font-size: 11px;
+  }
+  .build-bar {
+    flex-wrap: wrap;
+    bottom: calc(295px + env(safe-area-inset-bottom));
+    width: calc(100% - 24px);
+    padding: 6px;
+    gap: 5px;
+  }
+  .build-bar button {
+    font-size: 10px;
+    padding: 7px;
+  }
+  .build-bar label {
+    font-size: 10px;
+  }
+  .build-bar select {
+    min-height: 34px;
+    width: 70px;
+    font-size: 11px;
+  }
+  dialog.game-console {
+    width: calc(100% - 12px);
+    max-height: 87dvh;
+  }
+  .console-grid {
+    display: block;
+  }
+  .console-heading {
+    padding: 14px;
+  }
+  .console-heading h2 {
+    font-size: 18px;
+  }
+  .console-heading button {
+    font-size: 11px;
+    min-height: 44px;
+  }
+  .console-links {
+    padding: 10px 14px;
+    gap: 12px;
+    font-size: 11px;
+    flex-wrap: wrap;
+  }
+  .console-links button {
+    font-size: 10px;
+  }
+  .world-notice {
+    top: 230px;
+    max-width: calc(100% - 48px);
+    font-size: 11px;
+  }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .navigation-readout {
+    top: 72px;
+  }
+  .game-header .brand span {
+    display: none;
+  }
+  .resident-card,
+  .game[data-moving="true"] .resident-card {
+    top: 74px;
+    bottom: auto;
+  }
+  .resident-card div span {
+    max-width: 150px;
+  }
+  .move-pad {
+    bottom: 90px;
+    width: 110px;
+    height: 110px;
+  }
+  .vertical-pad {
+    bottom: 90px;
+  }
+  .game-dock {
+    bottom: 6px;
+    padding: 2px;
+  }
+  .game-dock button {
+    min-height: 44px;
+  }
+  .world-footer {
+    bottom: 65px;
+  }
+  .build-bar {
+    top: 75px;
+    bottom: auto;
+    left: 50%;
+    width: auto;
+  }
+  .view-controls {
+    top: 75px;
+  }
+  .view-controls button {
+    min-height: 34px;
+  }
+  .console-heading {
+    position: static;
+  }
+}

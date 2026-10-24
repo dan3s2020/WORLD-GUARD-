@@ -1,8 +1,9 @@
-import { CITIES, SCENARIOS, optionsFor, capture } from "./sim/life.mjs";
+import { CITIES, SCENARIOS, optionsFor } from "./sim/life.mjs";
 import { createSpatialLife } from "./sim/spatial-life.mjs";
 import { evaluateLifePolicy, randomLifePolicy } from "./sim/life-train.mjs";
 import { openCheckpointStore } from "./sim/checkpoint-store.mjs";
 import { createGameScene, ZOOM_LEVELS } from "./game-scene.mjs";
+import { validateExploration } from "./sim/planet-world.mjs";
 const el = (id) => document.getElementById(id),
   text = (id, value) => {
     el(id).textContent = String(value);
@@ -23,6 +24,43 @@ let runtime = createSpatialLife(),
   importBusy = false;
 let message = "Ready. No decisions have been staged.",
   saveMessage = "Opening local checkpoint storage…";
+let buildTool = null,
+  noticeTimer = null,
+  ready = false;
+function notice(value) {
+  text("worldNotice", value);
+  el("worldNotice").hidden = false;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => (el("worldNotice").hidden = true), 4500);
+}
+function openConsole(section) {
+  scene?.clearInput();
+  if (!el("console").open) el("console").showModal();
+  if (section) el(section).scrollIntoView({ block: "start" });
+}
+function checkpoint() {
+  return { ...runtime.exportCheckpoint(), exploration: scene?.exportState() };
+}
+function explorerMode(mode) {
+  scene?.setFollow(false);
+  el("follow").checked = false;
+  scene?.setMode(mode);
+  el("planet").focus({ preventScroll: true });
+}
+el("planet").addEventListener("webglcontextlost", (e) => {
+  e.preventDefault();
+  stop();
+  save({ automatic: true });
+  scene?.dispose();
+  scene = null;
+  el("startup").hidden = false;
+  text(
+    "startup",
+    "3D paused because the graphics context was lost. Reload this page to reopen the saved world. World → Export JSON remains available.",
+  );
+  message = "Graphics context lost. World and training paused.";
+  render();
+});
 function stop() {
   running = false;
   stepping = false;
@@ -32,7 +70,7 @@ function snapshot() {
   const s = runtime.state();
   return frameIndex === null
     ? {
-        world: capture(s.world),
+        world: s.world,
         actors: s.actors,
         time: s.time,
         policy: s.policy,
@@ -41,7 +79,8 @@ function snapshot() {
     : runtime.frame(frameIndex);
 }
 function inspectBuilding(id, city) {
-  el("follow").checked=false;scene?.setFollow(false);
+  el("follow").checked = false;
+  scene?.setFollow(false);
   scene?.focusBuilding(id, city);
   el("buildingRooms").hidden = false;
   text(
@@ -72,7 +111,11 @@ function selectAgent(id, { focus = true } = {}) {
   if (!runtime.state().world.agents.some((a) => a.id === id)) return;
   selected = id;
   el("resident").value = id;
-  if (focus) {el("follow").checked=true;scene?.setFollow(true);scene?.focusAgent(id);}
+  if (focus) {
+    el("follow").checked = true;
+    scene?.setFollow(true);
+    scene?.focusAgent(id);
+  }
   render();
 }
 function populate() {
@@ -88,12 +131,14 @@ function populate() {
 function setFrame(i) {
   stop();
   frameIndex = Math.max(0, Math.min(runtime.state().frames.length - 1, i));
+  scene?.setReplay(frameIndex);
   scene?.update(snapshot(), selected);
   render();
 }
 function goLive() {
   replaying = false;
   frameIndex = null;
+  scene?.setReplay(null);
   scene?.update(snapshot(), selected);
   render();
 }
@@ -168,6 +213,23 @@ function render() {
     importBusy;
   el("learning").checked = s.learning;
   el("reviewPanel").hidden = !s.world.pending;
+  text(
+    "quickPause",
+    s.world.pending ? "Review" : running || stepping ? "Ⅱ Pause" : "▶ Resume",
+  );
+  el("quickPause").disabled = !scene || s.capacityReached;
+  text(
+    "lessons",
+    `${stats.observations} outcomes learned · ${stats.updates} updates`,
+  );
+  text(
+    "residentName",
+    `${agent.id} · ${CITIES.find((c) => c.id === agent.city).name}`,
+  );
+  text(
+    "residentActivity",
+    `${actor?.moving ? "Walking to " + actor.destination : agent.history.at(-1)?.action || "At home"} · trust ${agent.trust}`,
+  );
   text(
     "reviewDescription",
     s.world.pending
@@ -289,7 +351,10 @@ async function save({ automatic = false } = {}) {
   el("save").disabled = true;
   try {
     const savedRuntime = runtime,
-      checkpoint = runtime.exportCheckpoint();
+      checkpoint = {
+        ...runtime.exportCheckpoint(),
+        exploration: scene?.exportState(),
+      };
     await store.write(checkpoint);
     if (runtime === savedRuntime) {
       lastSavedCount = checkpoint.records.length;
@@ -354,10 +419,18 @@ el("buildingView").addEventListener("click", () => {
   inspectBuilding(a.building, a.city);
 });
 el("apartmentView").addEventListener("click", () =>
-  (()=>{el("follow").checked=false;scene?.setFollow(false);scene?.focusApartment(selected);})(),
+  (() => {
+    el("follow").checked = false;
+    scene?.setFollow(false);
+    scene?.focusApartment(selected);
+  })(),
 );
 el("agentView").addEventListener("click", () =>
-  (()=>{el("follow").checked=true;scene?.setFollow(true);scene?.focusAgent(selected, ZOOM_LEVELS.agent);})(),
+  (() => {
+    el("follow").checked = true;
+    scene?.setFollow(true);
+    scene?.focusAgent(selected, ZOOM_LEVELS.agent);
+  })(),
 );
 el("zoom").addEventListener("input", (e) =>
   scene?.setZoom(Number(e.target.value) / 1000),
@@ -443,7 +516,7 @@ el("evaluate").addEventListener("click", () => {
 el("save").addEventListener("click", () => save());
 el("export").addEventListener("click", () => {
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(runtime.exportCheckpoint())], {
+    new Blob([JSON.stringify(checkpoint())], {
       type: "application/json",
     }),
   );
@@ -463,6 +536,7 @@ el("import").addEventListener("change", async (e) => {
     if (file.size > 150 * 1024 * 1024) throw Error("Checkpoint exceeds 150 MB");
     const data = JSON.parse(await file.text());
     const candidate = createSpatialLife({ checkpoint: data });
+    validateExploration(data.exploration);
     runtime = candidate;
     selected = candidate.state().world.agents[0].id;
     frameIndex = null;
@@ -470,6 +544,7 @@ el("import").addEventListener("change", async (e) => {
     message = "Imported checkpoint. Simulation is paused.";
     scene?.update(snapshot(), selected);
     scene?.focusAgent(selected, ZOOM_LEVELS.city);
+    scene?.restoreState(data.exploration);
     saveMessage = "Imported. Save checkpoint to retain it on this device.";
   } catch (err) {
     saveMessage = `Import failed: ${err.message}. Current session preserved.`;
@@ -501,6 +576,7 @@ el("confirmNew").addEventListener("click", () => {
   lastSavedCount = -1;
   populate();
   message = "New world ready. Learned weights retained.";
+  scene?.restoreState(null);
   el("replaceDialog").close();
   goLive();
 });
@@ -525,9 +601,23 @@ window.WorldGuardFeatureFocus = (feature) => {
     ledger: "ledger",
     checklist: "settingsChecklist",
     persistence: "savePanel",
+    explore: "planet",
+    walk: "planet",
+    build: "planet",
   }[feature];
   if (!target) return false;
+  if (["planet"].includes(target)) el("console").close();
+  else openConsole(target);
   if (["globe", "game"].includes(feature)) scene?.setZoom(0);
+  if (feature === "explore") {
+    scene?.setFollow(false);
+    scene?.setZoom(0);
+  }
+  if (feature === "walk") explorerMode("walk");
+  if (feature === "build") {
+    tool("place");
+    scene?.focusCity("eu");
+  }
   if (feature === "city") scene?.focusCity("eu");
   if (feature === "follow") {
     el("follow").checked = true;
@@ -550,6 +640,13 @@ async function boot() {
   try {
     scene = createGameScene(el("planet"), {
       onZoom: (z) => (el("zoom").value = Math.round(z * 1000)),
+      onNotice: notice,
+      onObstacles: (value) => runtime.setObstacles(value),
+      onEdit: (event) => {
+        const frame = runtime.recordWorldEvent(event);
+        lastSavedCount = -20;
+        return frame;
+      },
       onPick: (pick) => {
         if (pick.kind === "city") {
           const a = runtime
@@ -558,8 +655,18 @@ async function boot() {
           if (a) selectAgent(a.id, { focus: false });
           scene.focusCity(pick.id);
         }
-        if (pick.kind === "building") inspectBuilding(pick.id, pick.city);
-        if (pick.kind === "agent") selectAgent(pick.id);
+        if (pick.kind === "building") {
+          inspectBuilding(pick.id, pick.city);
+          notice(
+            `${pick.id}: use World → Apartments to inspect its residents. Walk through the doorway to enter.`,
+          );
+        }
+        if (pick.kind === "agent") {
+          selectAgent(pick.id);
+          notice(
+            `${pick.id} selected. Lives opens their decisions and history.`,
+          );
+        }
       },
     });
     scene.update(snapshot(), selected);
@@ -575,6 +682,7 @@ async function boot() {
     store = await openCheckpointStore();
     const saved = await store.read();
     if (saved) {
+      validateExploration(saved.exploration);
       runtime = createSpatialLife({ checkpoint: saved });
       selected = runtime.state().world.agents[0].id;
       populate();
@@ -582,12 +690,23 @@ async function boot() {
         "Restored the saved world and neural weights. Paused for inspection.";
       saveMessage = `Restored ${runtime.state().policy.updates} updates and ${runtime.state().frames.length} replay frames.`;
       scene?.update(snapshot(), selected);
+      scene?.restoreState(saved.exploration);
     } else
       saveMessage =
         "Local storage ready. Autosaves after every 20 outcomes and on pause.";
   } catch (e) {
     saveMessage = `Local storage unavailable: ${e.message}. Use JSON export/import.`;
     el("saveStatus").classList.add("error");
+  }
+  ready = true;
+  if (
+    scene &&
+    !saveMessage.startsWith("Restored") &&
+    !runtime.state().world.pending
+  ) {
+    running = true;
+    message =
+      "Residents are living and learning. Explore freely, or pause the world.";
   }
   render();
   const feature = new URLSearchParams(location.search).get("feature");
@@ -640,16 +759,41 @@ function loop(now) {
   }
   const f = snapshot();
   scene?.update(f, selected);
+  scene?.setReplay(frameIndex);
   const camera = scene?.render(dt);
   if (camera) {
     text(
       "cameraInfo",
-      `${camera.level.toUpperCase()} · distance ${camera.distance.toFixed(1)} world units`,
+      `${camera.mode.toUpperCase()} · ${camera.lat.toFixed(3)}°, ${camera.lon.toFixed(3)}° · altitude ${Math.max(0, camera.altitude).toFixed(0)}`,
     );
     text(
       "location",
-      `${camera.level.toUpperCase()} / ${CITIES.find((c) => c.id === camera.city).name.toUpperCase()}`,
+      camera.city
+        ? `${CITIES.find((c) => c.id === camera.city).name.toUpperCase()} / ${camera.biome.toUpperCase()}`
+        : camera.biome.toUpperCase(),
     );
+    const moving = camera.mode !== "orbit";
+    document.body.dataset.moving = String(moving);
+    el("movePad").hidden = !moving;
+    el("verticalPad").hidden = !moving;
+    el("rise").hidden = el("sink").hidden = camera.mode !== "fly";
+    el("jump").hidden = camera.mode !== "walk";
+    for (const [id, mode] of [
+      ["hudOrbit", "orbit"],
+      ["hudFly", "fly"],
+      ["hudWalk", "walk"],
+    ])
+      el(id).setAttribute("aria-pressed", String(camera.mode === mode));
+    text(
+      "controlsHint",
+      moving
+        ? "WASD / joystick to move · drag to look · " +
+            (camera.mode === "walk"
+              ? "Space to jump"
+              : "E / Q to rise / descend")
+        : "Drag to orbit · pinch to zoom · tap Earth to descend",
+    );
+    text("blockCountHud", `${camera.blocks} blocks`);
     for (const b of el("cities").children)
       b.setAttribute("aria-pressed", String(b.dataset.city === camera.city));
   }
@@ -664,11 +808,178 @@ function loop(now) {
 }
 window.WorldGuardGame = {
   getState: () => runtime.state(),
-  checkpoint: () => runtime.exportCheckpoint(),
+  checkpoint,
   getFrame: (i) => runtime.frame(i),
   getCamera: () => scene?.render(0),
   setZoom: (z) => scene?.setZoom(z, { immediate: true }),
   selectAgent,
-  ready: () => !!scene,
+  travel: (lat, lon, zoom = ZOOM_LEVELS.city) => scene?.travel(lat, lon, zoom),
+  setMode: explorerMode,
+  ready: () => ready && !!scene,
 };
+el("openConsole").addEventListener("click", () => openConsole());
+el("closeConsole").addEventListener("click", () => el("console").close());
+el("console").addEventListener("close", () => el("openConsole").focus());
+el("quickPause").addEventListener("click", () => {
+  if (runtime.state().world.pending) {
+    openConsole("reviewPanel");
+    return;
+  }
+  if (running || stepping) {
+    stop();
+    message = "World paused. You can still explore.";
+    save({ automatic: true });
+    render();
+  } else start();
+});
+el("hudEarth").addEventListener("click", () => {
+  scene?.setFollow(false);
+  el("follow").checked = false;
+  scene?.setZoom(0);
+});
+for (const [id, mode] of [
+  ["hudOrbit", "orbit"],
+  ["hudFly", "fly"],
+  ["hudWalk", "walk"],
+])
+  el(id).addEventListener("click", () => explorerMode(mode));
+el("hudZoomIn").addEventListener("click", () =>
+  scene?.setZoom(scene.zoom() + 0.06),
+);
+el("hudZoomOut").addEventListener("click", () =>
+  scene?.setZoom(scene.zoom() - 0.06),
+);
+el("hudFollow").addEventListener("click", () => {
+  selectAgent(selected);
+  scene?.setFollow(true);
+});
+el("inspectResident").addEventListener("click", () =>
+  openConsole("agentPanel"),
+);
+el("hudPeople").addEventListener("click", () => openConsole("agentPanel"));
+el("hudReplay").addEventListener("click", () => openConsole("replayTitle"));
+function tool(value) {
+  buildTool = value;
+  scene?.setTool(value, el("blockMaterial").value);
+  el("buildBar").hidden = !value;
+  el("hudBuild").setAttribute("aria-pressed", String(!!value));
+  el("placeBlock").setAttribute("aria-pressed", String(value === "place"));
+  el("removeBlock").setAttribute("aria-pressed", String(value === "remove"));
+}
+el("hudBuild").addEventListener("click", () => {
+  tool(buildTool ? null : "place");
+  if (buildTool)
+    notice(
+      "Aim at the ground and tap Build here. Placed blocks save with the world and appear in replay.",
+    );
+});
+el("placeBlock").addEventListener("click", () => tool("place"));
+el("removeBlock").addEventListener("click", () => tool("remove"));
+el("blockMaterial").addEventListener("change", () => tool(buildTool));
+el("useTool").addEventListener("click", () => scene?.interact());
+el("undoBlock").addEventListener("click", () => scene?.undo());
+el("interact").addEventListener("click", () => scene?.interact());
+el("jump").addEventListener("click", () => scene?.jump());
+function held(button, x, z, y = 0) {
+  const release = () => scene?.setMove(0, 0, 0);
+  button.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    button.setPointerCapture(e.pointerId);
+    scene?.setMove(x, z, y);
+  });
+  for (const n of ["pointerup", "pointercancel", "lostpointercapture"])
+    button.addEventListener(n, release);
+  button.addEventListener("keydown", (e) => {
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      scene?.setMove(x, z, y);
+    }
+  });
+  button.addEventListener("keyup", release);
+  button.addEventListener("blur", release);
+}
+for (const b of document.querySelectorAll("[data-move]")) {
+  const [x, z] = b.dataset.move.split(",").map(Number);
+  held(b, x, z);
+}
+held(el("rise"), 0, 0, 1);
+held(el("sink"), 0, 0, -1);
+let stickPointer = null;
+function stick(e) {
+  const r = el("joystick").getBoundingClientRect(),
+    dx = (e.clientX - r.x - r.width / 2) / (r.width / 2),
+    dy = (e.clientY - r.y - r.height / 2) / (r.height / 2),
+    len = Math.max(1, Math.hypot(dx, dy));
+  scene?.setMove(dx / len, -dy / len);
+  el("joystick").firstElementChild.style.transform =
+    `translate(${(dx / len) * 24}px,${(dy / len) * 24}px)`;
+}
+el("joystick").addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  stickPointer = e.pointerId;
+  el("joystick").setPointerCapture(e.pointerId);
+  stick(e);
+});
+el("joystick").addEventListener("pointermove", (e) => {
+  if (stickPointer === e.pointerId) stick(e);
+});
+for (const n of ["pointerup", "pointercancel", "lostpointercapture"])
+  el("joystick").addEventListener(n, () => {
+    stickPointer = null;
+    scene?.setMove(0, 0);
+    el("joystick").firstElementChild.style.transform = "";
+  });
+el("openTravel").addEventListener("click", () => {
+  scene?.clearInput();
+  el("travelDialog").showModal();
+  el("travelLat").focus();
+});
+el("closeTravel").addEventListener("click", () => el("travelDialog").close());
+el("travelDialog").addEventListener("close", () => el("openTravel").focus());
+el("travelForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const a = el("travelLat"),
+    b = el("travelLon"),
+    lat = Number(a.value),
+    lon = Number(b.value);
+  const valid =
+    a.value.trim() &&
+    b.value.trim() &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lon) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lon) <= 180;
+  a.setAttribute(
+    "aria-invalid",
+    String(!a.value.trim() || !Number.isFinite(lat) || Math.abs(lat) > 90),
+  );
+  b.setAttribute(
+    "aria-invalid",
+    String(!b.value.trim() || !Number.isFinite(lon) || Math.abs(lon) > 180),
+  );
+  a.setAttribute("aria-describedby", "travelError");
+  b.setAttribute("aria-describedby", "travelError");
+  if (!valid) {
+    text("travelError", "Enter latitude −90…90 and longitude −180…180.");
+    (a.getAttribute("aria-invalid") === "true" ? a : b).focus();
+    return;
+  }
+  text("travelError", "");
+  scene?.travel(lat, lon);
+  el("follow").checked = false;
+  el("travelDialog").close();
+});
+el("fullscreen").addEventListener("click", async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen)
+      await document.documentElement.requestFullscreen();
+    else
+      notice(
+        "Fullscreen is unavailable in this browser. Hide the browser bar or use landscape mode.",
+      );
+  } catch (e) {
+    notice(`Fullscreen unavailable: ${e.message}`);
+  }
+});
 boot();

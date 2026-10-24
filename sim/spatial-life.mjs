@@ -12,7 +12,7 @@ import {
 import { createNeuralPolicy } from "./neural-policy.mjs";
 export const FIXED_DT = 0.05,
   MAX_SPATIAL_FRAMES = 6000;
-const clone = (x) => JSON.parse(JSON.stringify(x));
+const clone = (x) => structuredClone(x);
 export function buildingPoint(building, apartment = 1) {
   const b = BUILDINGS.find((b) => b.id === building);
   if (!b) throw Error("Unknown building");
@@ -54,6 +54,7 @@ export function createSpatialLife({
     sequence = 0,
     frames = [],
     records = [],
+    obstacles = [],
     learning = true,
     capacityReached = false;
   const homes = BUILDINGS.filter((b) => b.kind === "home");
@@ -77,6 +78,27 @@ export function createSpatialLife({
     lastAction: null,
   }));
   let pendingObservation = null;
+  const historyCache = new Map();
+  function spatialCapture() {
+    const result = capture({ ...world, agents: [] });
+    result.agents = world.agents.map((a) => {
+      let cached = historyCache.get(a.id);
+      if (
+        !cached ||
+        cached.source !== a.history ||
+        cached.length !== a.history.length
+      ) {
+        cached = {
+          source: a.history,
+          length: a.history.length,
+          value: clone(a.history),
+        };
+        historyCache.set(a.id, cached);
+      }
+      return { ...a, history: cached.value };
+    });
+    return result;
+  }
   function record(kind, event = null) {
     if (frames.length >= MAX_SPATIAL_FRAMES) {
       capacityReached = true;
@@ -87,7 +109,7 @@ export function createSpatialLife({
       time,
       kind,
       actors: clone(actors),
-      world: capture(world),
+      world: spatialCapture(),
       policy: policy.stats(),
       event: event ? clone(event) : null,
     });
@@ -205,12 +227,32 @@ export function createSpatialLife({
     synchronizeDestinations();
     for (const actor of actors) {
       let budget = 3.5 * FIXED_DT;
+      actor.pathBlocked = false;
       while (actor.path.length && budget > 0) {
         const p = actor.path[0],
           dx = p.x - actor.x,
           dy = p.y - actor.y,
           dz = p.z - actor.z,
           dist = Math.hypot(dx, dy, dz);
+        const ratio = dist ? Math.min(1, budget / dist) : 1;
+        const next = {
+          x: actor.x + dx * ratio,
+          y: actor.y + dy * ratio,
+          z: actor.z + dz * ratio,
+        };
+        if (
+          obstacles.some(
+            (o) =>
+              o.city === actor.city &&
+              Math.abs(next.x - o.x) < 1.25 &&
+              Math.abs(next.z - o.z) < 1.25 &&
+              next.y + 1.3 > o.y &&
+              next.y < o.y + 2,
+          )
+        ) {
+          actor.pathBlocked = true;
+          break;
+        }
         if (dist <= budget) {
           Object.assign(actor, p);
           actor.path.shift();
@@ -265,6 +307,7 @@ export function createSpatialLife({
       sequence,
       frames: clone(frames),
       records: clone(records),
+      obstacles: clone(obstacles),
       learning,
       capacityReached,
       pendingObservation: clone(pendingObservation),
@@ -413,6 +456,23 @@ export function createSpatialLife({
     capacityReached =
       c.frames.length >= MAX_SPATIAL_FRAMES || !!c.capacityReached;
     pendingObservation = clone(c.pendingObservation);
+    setObstacles(c.obstacles || []);
+  }
+  function setObstacles(value) {
+    if (
+      !Array.isArray(value) ||
+      value.length > 4096 ||
+      value.some(
+        (o) =>
+          !CITIES.some((c) => c.id === o.city) ||
+          ![o.x, o.y, o.z].every(Number.isFinite) ||
+          Math.abs(o.x) > 100 ||
+          Math.abs(o.z) > 100 ||
+          Math.abs(o.y) > 500,
+      )
+    )
+      throw Error("Invalid world obstacles");
+    obstacles = clone(value);
   }
   if (checkpoint) restore(checkpoint);
   else record("initial");
@@ -434,5 +494,11 @@ export function createSpatialLife({
       learning = !!value;
     },
     prepare: synchronizeDestinations,
+    recordWorldEvent: (event) => {
+      if (world.pending || capacityReached) return null;
+      record("world-edit", event);
+      return frames.length - 1;
+    },
+    setObstacles,
   };
 }

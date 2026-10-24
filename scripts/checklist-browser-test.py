@@ -21,8 +21,8 @@ with sync_playwright() as p:
         assert page.locator('#requirementsDialog').is_visible()
         page.screenshot(path=str(Path(tempfile.gettempdir()) / f'worldguard-checklist-settings-{vp["width"]}.png'),full_page=True)
         r=page.evaluate('window.WorldGuardChecklistTest.getCounts()')
-        assert r=={'verified':15,'partial':30,'missing':10},r
-        assert page.locator('.requirement-entry input:checked').count()==15
+        assert r=={'verified':19,'partial':30,'missing':10},r
+        assert page.locator('.requirement-entry input:checked').count()==19
         assert page.locator('.requirement-entry.missing input:checked').count()==0
         page.locator('#requirementSearch').fill('Laya')
         assert page.locator('.requirement-entry').count()>=2

@@ -41,3 +41,13 @@ The game scene is the dominant canvas, with quiet instrumentation using the esta
 `game-scene.mjs` owns meshes, camera/LOD, native pointer and touch controls. `game-ui.mjs` owns actions and accessible native controls. Camera zoom has finite observable bounds: the whole sphere at the far limit and 1.2 world units from the agent target at the near limit. Geometry is synthetic and Earth-inspired, not a geographic Earth renderer. Moving bodies and action poses represent authoritative simulation state; they do not prove general intelligence or human identity.
 
 The right column uses the established UI language. Below 900px it moves below the scene and preserves document scrolling. Only the scene uses `touch-action:none`; other content scrolls normally. Motion is paused until the operator starts it. Reduced-motion mode removes UI transitions; deliberate simulation playback remains available under operator control.
+
+## Earth sandbox — v0.4 game-first correction
+
+The latest explicit rejection in `docs/verbatim/GAME_REJECTION_2026-10-25.md` supersedes the dashboard and fixed-district composition for `play.html`. The full dynamic viewport is now the playable world, with a quiet top HUD, a thumb-reachable bottom mode dock, circular movement control and a center aim marker. Training, histories and recovery live in the app-owned World dialog. The legacy labs retain their original layouts.
+
+The subject is an inhabited block-terrain Earth sandbox. Its signature is continuous travel from the globe into a place one can walk through and build in. Grass, terraced hills and block trees belong to world materials, not UI decoration. Flight and ground view expose a sky/horizon; orbit exposes the globe. System UI and monospace keep controls compact; the earlier display headline is removed from the game viewport.
+
+Runtime ownership stays Model B: `game.css :root` owns the existing navy/cyan/gold/text semantic tokens. The new HUD, modal and movement controls consume those tokens; `game-terrain.mjs` owns physical surface colors. No unrelated legacy palette is rewritten. Mobile safe areas, portrait and short landscape place controls over the world without a document scroll requirement. The console, checklist and travel dialogs retain visible, themed internal scrollbars.
+
+Fresh worlds run automatically so residents visibly live in the world. Restored checkpoints start paused. Camera/exploration remains usable while world time is paused. The world clock and learning counter stay small; neither becomes the primary screen. See the explicit drift resolution in `docs/EARTH_SANDBOX.md`.

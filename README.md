@@ -2,10 +2,24 @@
 
 An open-source, **synthetic** experiment in agent alignment: finish tasks while protecting a persistent world, resisting adversarial agents, and asking a human before taking consequential actions.
 
-**Status:** a v0.3 browser 3D game with a small online neural action learner, alongside the preserved v0.1/v0.2 labs. Not a general-world simulation. It does not claim to solve AI alignment, train large language models, or prove real-world safety.
+**Status:** v0.4 opens directly into a full-screen 3D Earth sandbox with free exploration and a small online neural action learner. The v0.1/v0.2 labs remain available. Geography and society are simplified; the project does not claim real-world fidelity or proved alignment.
+
+## Earth sandbox v0.4 — play first
+
+Open **http://127.0.0.1:8000/** after starting the server. The root now enters the game. On Windows run `START_3D.cmd`; on Termux run `bash START_TERMUX.sh`. The committed bundle requires no npm install or CDN to play.
+
+- **Earth:** pull out to the whole globe, drag it and tap any point to descend. The coordinate button also accepts any latitude/longitude.
+- **Observe / Fly / Walk:** orbit a location, fly freely, or walk at ground level. Use the joystick and swipe to look on mobile; WASD, mouse drag, E/Q and Space on desktop. Walk includes gravity, jumping, doorway/wall and placed-block collision.
+- **Build:** place, remove and undo blocks. Blocks obstruct residents' physical paths; a blocked resident cannot execute a workplace task until the route clears.
+- **Lives:** inspect individual residents, homes, decisions and histories. Residents run and learn by default in a new world; restored sessions are paused.
+- **World / Replay:** open training controls, checkpoints, requirement evidence and immutable historical playback over the game. Building edits are recorded and restored alongside neural weights and movement.
+
+Procedural chunks supply nearby block terrain, trees, highlands, deserts, snow and ocean scenery beyond the six inhabited districts. The globe includes bundled Natural Earth 1:110m coastlines with compressed game scale; elevations and biomes are procedural. It does not reproduce real streets, satellite imagery or a planet-wide economy. The learner remains the documented small contextual network; Laya integration is still missing.
+
+The old hospital dashboard is preserved at **`infrastructure.html`**, rather than being the default entry point. See [sandbox architecture and verification](docs/EARTH_SANDBOX.md) and [exact rejection and requirements](docs/verbatim/GAME_REJECTION_2026-10-25.md).
 
 
-## Living Planet 3D v0.3 — corrective implementation
+## Living Planet 3D v0.3 — previous implementation and training mechanics
 
 **Open `play.html`** (Windows: `START_3D.cmd`). The committed standalone bundle needs no CDN or package install to play. Serve the files with Python 3:
 
@@ -69,7 +83,7 @@ cd worldguard-lab
 python -m http.server 8000
 ```
 
-Open http://localhost:8000 and use **Step once**, **Run agent**, **Train 3,000 episodes**, **Go to relay & request authorization**, or **Attempt destructive shortcut**. The last feature's unchecked guardrail toggle lets researchers intentionally show a counterexample *inside the synthetic sandbox only*.
+Open http://localhost:8000/infrastructure.html for the preserved original lab and use **Step once**, **Run agent**, **Train 3,000 episodes**, **Go to relay & request authorization**, or **Attempt destructive shortcut**. The last feature's unchecked guardrail toggle lets researchers intentionally show a counterexample *inside the synthetic sandbox only*.
 
 Run tests and headless training:
 
@@ -100,7 +114,9 @@ The `sim/train.mjs` baseline implements actual tabular Q-learning on small state
 ## File structure
 
 ```
-index.html                Browser lab interface
+index.html                Default entry into play.html
+play.html                 Full-screen Earth sandbox
+infrastructure.html       Preserved original browser lab
 styles.css                Responsive design and design tokens
 ui.mjs                    Isometric renderer + human controls
 sim/core.mjs              Authoritative world state and safety/approval rules
@@ -134,6 +150,6 @@ MIT. You can copy this project into a public repository, fork it, modify it and 
 
 The user rejected v0.2.x as **not a real 3D playable world and not real Laya/Jev-like neural training**. This feedback is preserved without euphemism in `docs/verbatim/FEEDBACK_LIFE_LAB_V0.2_2026-10-25.md`.
 
-Open `life.html` and use **Settings · Requirement checklist** to inspect 55 extracted requirements. Only a narrowly verified **synthetic prototype** feature is checked; click its button to go to the functioning control/scene. A partial or missing feature is never passed off as working. The checklist source is `docs/REQUIREMENTS_CHECKLIST.json` and is compiled to a browser-readable script with `npm run build:checklist`.
+Open **World → Requirements checklist** in the game, or Settings in `life.html`, to inspect 59 extracted requirements. Checked items identify demonstrated capabilities; partial and missing features remain explicit. The canonical source is `docs/REQUIREMENTS_CHECKLIST.json`, compiled with `npm run build:checklist`.
 
 **Laya refers to the decision model** at <https://github.com/NandhaKishorM/laya>, **not LayaAir**. See `docs/LAYA_DECISION_ENGINE.md`. The real Laya checkpoint has **not** been installed, fine-tuned, or connected. The new `play.html` contains perspective 3D geometry and moving bodies. Rich physical/social gameplay and Laya integration remain incomplete; Settings records the narrower tested capabilities.

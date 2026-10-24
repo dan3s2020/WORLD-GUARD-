@@ -1,6 +1,6 @@
 {
   "name": "worldguard-lab",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Synthetic multi-agent world safety laboratory with human authorization gates",

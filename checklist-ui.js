@@ -17,6 +17,8 @@ total.textContent=`${all.length} REQUIREMENTS · ${counts.verified} VERIFIED (TO
 const hint=document.getElementById('requirementVersion');
 hint.textContent=dataset.releaseTarget+' · assessed against checked-in code, not production safety';
 let lastTrigger=opener;
+const clearSearch=document.createElement('button');clearSearch.type='button';clearSearch.textContent='Clear search ✕';clearSearch.setAttribute('aria-label','Clear requirement search');clearSearch.hidden=true;search.parentElement.append(clearSearch);
+clearSearch.addEventListener('click',()=>{search.value='';render();search.focus();});
 function append(item){
  const li=document.createElement('li');li.className='requirement-entry '+item.status;
  const top=document.createElement('div');top.className='requirement-top';
@@ -44,6 +46,7 @@ function append(item){
  li.append(actions);return li;
 }
 function render(){
+ clearSearch.hidden=!search.value;
  const q=search.value.trim().toLowerCase();const kind=filter.value;
  const visible=all.filter(x=>(kind==='all'||x.status===kind)&&(!q||[x.id,x.title,x.requirement,x.evidence||''].join(' ').toLowerCase().includes(q)));
  list.replaceChildren(...visible.map(append));

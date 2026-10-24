@@ -309,7 +309,7 @@ populateCityButtons();populateAgents();render();
 el('viewerLoading').hidden=true;
 // Navigation API for the immutable acceptance checklist. Never awards completion.
 window.WorldGuardFeatureFocus=function navigateToVerifiedFeature(feature){
- if(['game','persistence','follow','spatialReplay'].includes(feature)){window.location.href='play.html?feature='+encodeURIComponent(feature);return true;}
+ if(['game','persistence','follow','spatialReplay','explore','walk','build'].includes(feature)){window.location.href='play.html?feature='+encodeURIComponent(feature);return true;}
  const destination={
   globe:['worldCanvas','globe'],city:['worldCanvas','city'],building:['worldCanvas','building'],
   apartment:['worldCanvas','agent'],agent:['agentDetails','agent'],choices:['options',null],
