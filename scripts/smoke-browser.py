@@ -11,20 +11,20 @@ with sync_playwright() as p:
         errors=[]
         page=browser.new_page(viewport={'width':1440,'height':900}, device_scale_factor=1)
         page.on('pageerror',lambda e: errors.append(str(e)))
-        # Browser sandbox blocks all HTTP navigation, so compose the *unmodified* local assets
-        # with data: ESM import URLs for an equivalent zero-network smoke test.
-        import base64
-        def data_uri(src):
-            return 'data:text/javascript;base64,'+base64.b64encode(src.encode()).decode()
-        life=(root/'sim/life.mjs').read_text()
-        training=(root/'sim/life-train.mjs').read_text().replace("from './life.mjs'", "from '"+data_uri(life)+"'")
-        ui=(root/'life-ui.mjs').read_text().replace("from './sim/life.mjs'", "from '"+data_uri(life)+"'").replace("from './sim/life-train.mjs'", "from '"+data_uri(training)+"'")
-        html=(root/'life.html').read_text().replace('<link rel="stylesheet" href="life.css">','<style>'+(root/'life.css').read_text()+'</style>').replace('<script type="module" src="life-ui.mjs"></script>','')
+        # The browser harness cannot navigate to file:// or localhost, so inject the
+        # SAME generated classic script as a normal script into the unmodified HTML.
+        # Do not synthesize ESM data imports: they previously masked the file:// boot failure.
+        html=(root/'life.html').read_text().replace('<link rel="stylesheet" href="life.css">','<style>'+(root/'life.css').read_text()+'</style>').replace('<script defer src="life.bundle.js"></script>','')
         page.set_content(html,wait_until='load')
-        page.add_script_tag(content=ui,type='module')
+        assert page.locator('#viewerLoading').is_visible()
+        assert page.locator('#runStatus').inner_text()=='READY · Day 01'
+        page.add_script_tag(content=(root/'life.bundle.js').read_text())
         page.wait_for_function("document.getElementById('citySelect').children.length===6")
         assert 'Life Simulation Lab' in page.title()
         assert page.locator('#statAgents').inner_text()=='36'
+        assert page.locator('#viewerLoading').is_hidden()
+        assert page.locator('#runStatus').inner_text()=='READY · independent guard enabled'
+        assert page.locator('#worldCanvas').evaluate('c=>{const d=c.getContext("2d").getImageData(590,320,1,1).data;return d[3]===255&&(d[0]+d[1]+d[2])>0}')
         page.screenshot(path='/mnt/data/worldguard-life-desktop.png',full_page=True)
         page.get_by_role('button',name='Novara').click()
         assert page.locator('#viewChip').inner_text()=='2.5D CITY'

@@ -24,7 +24,7 @@
  <main class="layout">
   <section class="world" aria-labelledby="worldTitle">
    <div class="section-title"><div><span class="eyebrow">GOD'S EYE / WORLD OBSERVER</span><h2 id="worldTitle">Planetary view</h2></div><span class="chip" id="viewChip">3D PROJECTED GLOBE</span></div>
-   <div class="mapzone"><canvas id="worldCanvas" width="1200" height="660" tabindex="0" role="img" aria-label="Interactive three-dimensional projected globe. Drag to rotate; select a city to zoom to buildings, apartments, and their simulated residents."></canvas><div class="world-stamp">DETERMINISTIC SIMULATION <b>●</b> EXPERIMENTAL</div><div class="hud-left" id="mapHint">DRAG TO ROTATE · SELECT A CITY</div></div>
+   <div class="mapzone"><div id="viewerLoading" class="viewer-startup" role="status">Starting WORLD GUARD viewer… If this message remains visible, the JavaScript did not initialize. Check that life.bundle.js is beside life.html.</div><canvas id="worldCanvas" width="1200" height="660" tabindex="0" role="img" aria-label="Interactive three-dimensional projected globe. Drag to rotate; select a city to zoom to buildings, apartments, and their simulated residents."></canvas><div class="world-stamp">DETERMINISTIC SIMULATION <b>●</b> EXPERIMENTAL</div><div class="hud-left" id="mapHint">DRAG TO ROTATE · SELECT A CITY</div></div>
    <div class="navrow"><button id="back" type="button" class="button secondary" disabled>← Back a level</button><span id="path" class="breadcrumbs">EARTH / GLOBAL</span><button id="return" type="button" class="button secondary">Reset camera</button></div>
    <div class="city-select" id="citySelect" aria-label="Choose a simulation city"></div>
    <section class="timeline" aria-labelledby="timelineTitle"><div class="row between"><h3 id="timelineTitle">Complete world replay</h3><span class="smallcaps" id="timelineCount">FRAME 0000 / 0000</span></div><input type="range" id="frame" min="0" max="0" value="0" step="1" aria-label="Replay frame"><div class="row"><button id="first" class="button secondary" type="button">|◀ First</button><button id="previous" class="button secondary" type="button">◀ Step back</button><button id="latest" class="button secondary" type="button">Latest ▶|</button><span class="flex-spacer"></span><label class="speed-label" for="speed">Playback speed</label><select id="speed"><option value="450">1×</option><option value="160">3×</option><option value="65">7×</option></select></div><p class="note" id="replayNotice">Live world — every accepted or blocked decision is recorded.</p></section>
@@ -41,6 +41,6 @@
  </main>
  <footer><strong>WORLD GUARD · LIFE LAB</strong><span>This is a small, synthetic research environment. No claim of human-like belief, real-world alignment, or full Earth fidelity.</span><span>OPEN SOURCE / MIT</span></footer>
 </div>
-<script type="module" src="life-ui.mjs"></script>
+<script defer src="life.bundle.js"></script>
 </body>
 </html>

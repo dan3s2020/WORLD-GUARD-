@@ -118,3 +118,4 @@ el('train').addEventListener('click',beginTraining);el('reset').addEventListener
 el('approve').addEventListener('click',()=>{stop();resolveLifeReview(w,true);frameIndex=w.frames.length-1;render();});el('deny').addEventListener('click',()=>{stop();resolveLifeReview(w,false);frameIndex=w.frames.length-1;render();});
 el('export').addEventListener('click',exportCheckpoint);
 populateCityButtons();populateAgents();render();
+el('viewerLoading').hidden=true;

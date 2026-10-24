@@ -4,3 +4,6 @@
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
 
 .event.empty{display:block;color:var(--muted)}
+
+/* Visible initialization failure instead of a silently blank planet. */
+.viewer-startup{position:absolute;z-index:2;inset:18% 12%;display:grid;place-items:center;text-align:center;padding:30px;border:1px dashed #6687a2;border-radius:12px;background:#091827e8;color:#daf4ff;font:600 14px/1.7 ui-monospace,monospace;pointer-events:none}.viewer-startup[hidden]{display:none}
