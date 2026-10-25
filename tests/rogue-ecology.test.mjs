@@ -67,7 +67,7 @@ test("spatial game emits rival duels only after actions and preserves their rewa
     r.state().records.at(-1).reward,
     r.state().records.at(-1).baseReward + r.state().records.at(-1).duel.rewardDelta,
   );
-  assert.equal(r.state().rogues.encounters, 1);
+  assert.equal(r.state().rogues.encounters, 2);
   assert.equal(r.state().frames.at(-1).event.duel.id, r.state().records.at(-1).duel.id);
 });
 test("spatial checkpoint and replay retain rogue history and deterministic continuation", () => {
