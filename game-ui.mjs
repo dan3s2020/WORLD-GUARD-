@@ -74,6 +74,7 @@ function snapshot() {
         actors: s.actors,
         time: s.time,
         policy: s.policy,
+        rogues: s.rogues,
         event: s.frames.at(-1).event,
       }
     : runtime.frame(frameIndex);
@@ -148,7 +149,8 @@ function render() {
     d = runtime.decision(),
     agent = f.world.agents.find((a) => a.id === selected) || f.world.agents[0],
     actor = f.actors.find((a) => a.id === selected),
-    stats = frameIndex === null ? s.policy : f.policy;
+    stats = frameIndex === null ? s.policy : f.policy,
+    rivals = f.rogues;
   scene?.update(f, selected);
   text(
     "mode",
@@ -168,7 +170,7 @@ function render() {
   );
   text(
     "motion",
-    `${f.actors.filter((a) => a.moving).length} walking · ${f.actors.length} residents`,
+    `${f.actors.filter((a) => a.moving).length} walking · ${f.actors.length} residents · ${rivals ? `${rivals.active} active rogues` : "historic rivals unavailable"}`,
   );
   text("dayCount", `Day ${f.world.day}`);
   text("decisionCount", `${f.world.turn} decisions today`);
@@ -220,7 +222,7 @@ function render() {
   el("quickPause").disabled = !scene || s.capacityReached;
   text(
     "lessons",
-    `${stats.observations} outcomes learned · ${stats.updates} updates`,
+    `${stats.observations} outcomes learned · ${stats.updates} updates · ${rivals ? `${rivals.dormant} latent rivals · generation ${rivals.maxGeneration}` : "no archived rival ecology"}`,
   );
   text(
     "residentName",
@@ -301,7 +303,7 @@ function render() {
     frameIndex !== null
       ? "Training counters above belong to this recorded frame."
       : d
-        ? `${s.ready ? "At destination" : "Waiting for arrival"} · policy weights updated ${s.policy.updates} times`
+        ? `${s.ready ? "At destination" : "Waiting for arrival"} · policy weights updated ${s.policy.updates} times${d.rogueThreat ? ` · ${d.rogueThreat.id} challenges with ${d.rogueThreat.tactic}` : ""}`
         : "Policy cannot self-authorize.",
   );
   const history = agent.history.slice().reverse();
@@ -326,7 +328,7 @@ function render() {
       ...records.map((r) => {
         const li = document.createElement("li");
         li.className = r.blocked ? "blocked" : "";
-        li.textContent = `D${r.day} / ${r.time.toFixed(2)}s / ${r.agentId} / ${r.observation.scenario.id} → ${r.action} → reward ${r.reward}${r.blocked ? " · VETO" : ""} → updates ${r.updatesBefore}–${r.updatesAfter}`;
+        li.textContent = `D${r.day} / ${r.time.toFixed(2)}s / ${r.agentId} / ${r.observation.scenario.id} → ${r.action} → reward ${r.reward}${r.blocked ? " · VETO" : ""}${r.duel ? ` · DUEL ${r.duel.id} (${r.duel.tactic}) winner: ${r.duel.winner}` : ""} → updates ${r.updatesBefore}–${r.updatesAfter}`;
         return li;
       }),
     );
