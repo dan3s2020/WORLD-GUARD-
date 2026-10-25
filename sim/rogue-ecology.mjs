@@ -122,13 +122,20 @@ export function createRogueEcology({ seed = 19, cities = ["eu", "am", "sa", "as"
         }
         continue;
       }
-      if (agents.length >= MAX_ROGUES) continue;
       candidates.sort((a, b) => (b.fitness + b.genes.replication * 0.2 - footprint(b) * 0.1) -
                                 (a.fitness + a.genes.replication * 0.2 - footprint(a) * 0.1));
       const parent = candidates[0];
       if (random() >= parent.genes.replication * 0.75) continue;
       const childGenes = Object.fromEntries(traits.map((t) => [t,
         Number(clamp(parent.genes[t] + (random() - 0.5) * 0.18, 0.03, 0.97).toFixed(5))]));
+      if (agents.length >= MAX_ROGUES) {
+        // Bounded population with open-ended evolutionary generations:
+        // descendants displace weaker simulated residents, never reservoirs.
+        const victim = agents.filter((a) => a.city === city && !a.reservoir && a.id !== parent.id)
+          .sort((a, b) => a.fitness - b.fitness)[0];
+        if (!victim) continue;
+        agents.splice(agents.indexOf(victim), 1);
+      }
       add({ city, latent: random() < 0.5, parent: parent.id, generation: parent.generation + 1,
         genes: childGenes, weights: parent.weights.map((w) => Number(clamp(w + (random() - 0.5) * 0.2, -2, 2).toFixed(5))) });
       totals.births++;
@@ -164,7 +171,7 @@ export function createRogueEcology({ seed = 19, cities = ["eu", "am", "sa", "as"
     for (const city of cities) if (!c.agents.some((a) => a.city === city && a.reservoir && a.latent))
       throw Error("Missing protected latent rival reservoir");
     if (c.totals.encounters !== c.totals.rogueWins + c.totals.defenderWins ||
-        (c.lastDuel !== null && (!c.lastDuel || !ids.has(c.lastDuel.id) || !ROGUE_TACTICS.includes(c.lastDuel.tactic))))
+        (c.lastDuel !== null && (!c.lastDuel || typeof c.lastDuel.id !== "string" || !ROGUE_TACTICS.includes(c.lastDuel.tactic))))
       throw Error("Invalid rogue duel ledger");
     agents = clone(c.agents);
     rngState = c.rngState; step = c.step; nextId = c.nextId;
