@@ -10,6 +10,7 @@ import {
   resolveLifeReview,
 } from "./life.mjs";
 import { createNeuralPolicy } from "./neural-policy.mjs";
+import { findDetour, segmentBlocked } from "./navigation.mjs";
 export const FIXED_DT = 0.05,
   MAX_SPATIAL_FRAMES = 6000;
 const clone = (x) => structuredClone(x);
@@ -240,17 +241,35 @@ export function createSpatialLife({
           y: actor.y + dy * ratio,
           z: actor.z + dz * ratio,
         };
-        if (
-          obstacles.some(
-            (o) =>
-              o.city === actor.city &&
-              Math.abs(next.x - o.x) < 1.25 &&
-              Math.abs(next.z - o.z) < 1.25 &&
-              next.y + 1.3 > o.y &&
-              next.y < o.y + 2,
-          )
-        ) {
-          actor.pathBlocked = true;
+        if (segmentBlocked(actor, next, obstacles, actor.city)) {
+          // Player blocks are physical: route around the obstacle rather than
+          // freezing indefinitely or allowing a decision before arrival.
+          // Skip original road waypoints that were built over, never the final
+          // destination unless it is reachable through another waypoint.
+          let targetIndex = 0;
+          while (
+            targetIndex < actor.path.length &&
+            segmentBlocked(
+              actor.path[targetIndex],
+              actor.path[targetIndex],
+              obstacles,
+              actor.city,
+            )
+          ) targetIndex++;
+          const target = actor.path[targetIndex];
+          const budgetForDetour = Math.min(
+            20,
+            20 - (actor.path.length - targetIndex - 1),
+          );
+          const detour = target && budgetForDetour > 0
+            ? findDetour(actor, target, obstacles, actor.city, budgetForDetour)
+            : null;
+          if (detour) {
+            actor.path.splice(0, targetIndex + 1, ...detour);
+          } else {
+            // Unreachable destinations remain blocked; no action, no reward.
+            actor.pathBlocked = true;
+          }
           break;
         }
         if (dist <= budget) {
