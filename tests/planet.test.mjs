@@ -59,7 +59,7 @@ test("block addresses survive round-trip and malformed exploration cannot replac
     /camera/,
   );
 });
-test("placed obstacles actually stop a resident's route and removing them permits arrival before learning", () => {
+test("placed obstacles cause real detours, not phantom rewards or teleportation", () => {
   const r = createSpatialLife({ population: 1 });
   r.act("wake");
   r.act("complete");
@@ -67,18 +67,32 @@ test("placed obstacles actually stop a resident's route and removing them permit
   const a = { ...r.state().actors[0] };
   r.setObstacles([{ city: a.city, x: a.x, y: 0, z: a.z + 1.8 }]);
   r.advance(2, { auto: false });
-  assert.equal(r.state().actors[0].pathBlocked, true);
   assert.equal(r.state().ready, false);
   assert.equal(r.act("test_fix").ok, false);
   const saved = r.exportCheckpoint();
   assert.equal(saved.obstacles.length, 1);
-  assert.equal(
-    createSpatialLife({ checkpoint: saved }).exportCheckpoint().obstacles
-      .length,
-    1,
+  assert.deepEqual(
+    createSpatialLife({ checkpoint: saved }).exportCheckpoint(),
+    saved,
   );
+  for (let i = 0; i < 240 && !r.state().ready; i++)
+    r.advance(0.25, { auto: false });
+  assert.equal(r.state().ready, true, "resident should navigate around block");
+  assert.equal(r.act("test_fix").ok, true);
+});
+test("residents cannot cross an occupied origin; removing the block restores movement", () => {
+  const r = createSpatialLife({ population: 1 });
+  r.act("wake");
+  r.act("complete");
+  r.prepare();
+  const a = { ...r.state().actors[0] };
+  r.setObstacles([{ city: a.city, x: a.x, y: 0, z: a.z }]);
+  r.advance(1, { auto: false });
+  assert.equal(r.state().ready, false);
+  assert.equal(r.state().actors[0].pathBlocked, true);
+  assert.equal(r.act("test_fix").ok, false);
   r.setObstacles([]);
-  for (let i = 0; i < 200 && !r.state().ready; i++)
+  for (let i = 0; i < 240 && !r.state().ready; i++)
     r.advance(0.25, { auto: false });
   assert.equal(r.state().ready, true);
   assert.equal(r.act("test_fix").ok, true);
