@@ -1,33 +1,11 @@
-# WorldGuard Lab — design context
+# WORLD GUARD — canonical design context (v4.0 HTML baseline)
 
-**Purpose**: a test bench for alignment researchers to understand the observable relationship between agent intent, protected simulated infrastructure, world damage, and explicit human approvals.
+Date: 2026-10-25
 
-**North Star:** civil-defense situation room with a miniature isometric city, not a videogame reward casino.
+The current and only game/UI source of truth is `index.html`, imported byte-for-byte from the user-supplied v4.0 file. **Do not restyle or regenerate it when performing unrelated tasks.**
 
-**Experience:** the world is the dominant visual and source of truth; numeric impact metrics and a trustworthy event log frame the simulation. The human authorization station is visibly distinct from the agent's decisions.
+Its existing visual language is a dark full-screen 3D Earth with spatial glass HUD, cyan/gold/green/red/purple signals, role selection, planet navigation, sector overlays and simulation controls. The uploaded file defines the exact CSS and interactions; this document is descriptive, not a separate implementation.
 
-**Tokens** (canonical values implemented in `styles.css` `:root`):
-- `--bg: #080f1d` deep navy field
-- `--panel: #111d31` station panel
-- `--line: #2b3c57` separators
-- `--text: #ebf5ff` primary reading color
-- `--muted: #94a9c1` secondary metadata
-- `--cyan: #4ae1f3` defender/mission
-- `--gold: #ffc47c` human approval/critical infrastructure
-- `--red: #fa7783` adversarial/destructive risks
-- `--good: #77d9b1` proven simulation success
+**User constraints:** desktop + mobile, free planetary exploration with broad zoom range, visible agents, meaningful world activity and training, coherent playable 3D game rather than an interface mockup. The goal and verbatim feedback are retained under `docs/`; this baseline is not a claim that those requirements have been achieved.
 
-**Typography:** restrained Georgia display hero and metrics; system UI body; monospace for coordinates, audit status, event timestamps and engine diagnostics.
-
-**Layout:** map-first 2-column dashboard on desktop; stacked and scrollable controls on mobile. Labels remain visible when icons are absent. All actions use native buttons and keyboard focus rings.
-
-**Signature:** isometric micro-city with visible civil institutions, civilians, and explicit consequences, under a human oversight console.
-
-**Known boundary:** appearance communicates synthetic outcomes only; real-world alignment cannot be inferred from the displayed score.
-
-## v0.2 life simulation visual extension
-- New page: `life.html`, with independent `life.css`; legacy isometric infrastructure console's appearance and functionality stay intact.
-- Reuses deep navy, cyan, warm authorization gold, monospace instrumentation and restrained serif display typography.
-- Additional signature: a continuously reprojectable mathematical sphere with geographical markers; drill-down into a 2.5D city and building/apartment observer. Performance and clarity outrank map realism.
-- The user can reach all cities and residents via accessible native controls even if pointer-based map picking fails.
-- Event history and snapshots share a consistent immutable frame index.
+**Modification policy:** preserve the current implementation except for explicitly requested fixes, keep code changes narrow, re-check linked behavior and mobile use, test rather than asserting that UI or AI features are real. Historic design instructions were preserved unchanged at `docs/history/DESIGN_LEGACY.md`.

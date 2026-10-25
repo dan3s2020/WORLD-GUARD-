@@ -7,3 +7,8 @@ node_modules/
 coverage/
 *.zip
 __pycache__/
+
+test-results/
+playwright-report/
+premium-audit.json
+checkpoints/

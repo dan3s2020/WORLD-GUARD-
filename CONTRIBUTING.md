@@ -1,13 +1,11 @@
-# Contributing to WorldGuard Lab
+# Contributing to WORLD GUARD
 
-WorldGuard is a research prototype. Fixes should be submitted with reproducible seeds and automated tests. Contribution priorities:
+The currently maintained implementation is only `index.html`. Its original content must remain the baseline for future change reviews.
 
-1. Demonstrable safety failure cases and tests that catch them.
-2. Transparent environment rules and explicit human approval boundaries.
-3. Robust policies evaluated separately against task success and side effects.
-4. Realistic domain models and constrained red-team behaviors contained in the sandbox.
-5. Better accessibility, replay visualization, and support for different agent adapters.
+Read the user requirements and verbatim feedback under `docs/` before changing behavior. Make minimal diffs, preserve unchanged code, explain the exact modifications, and verify changes in desktop and mobile browsers. Do not re-introduce legacy simulators, bundles, training backends or their tests without a specific request.
 
-Do not introduce any default integrations that interact with live infrastructure, accounts, personal data, external tools or autonomous destructive capabilities. Attach synthetic examples. Do not claim that a toy result proves real-world safety.
+The app presently imports browser libraries from CDNs, so use a simple static HTTP server to run it. Historical tests and build scripts were removed with the previous implementations; do not claim that `npm test` or `npm run train` verifies this baseline.
 
-Run `npm test` and `npm run train` before opening a pull request. MIT license contributions are accepted under the project license.
+Never connect an educational simulation to real assets, devices, public services, malicious automation or payments by default. Real inference, actual training metrics and multiplayer require separate implementations and validation.
+
+The previous contributing instructions are preserved unchanged in `docs/history/CONTRIBUTING_LEGACY.md`.

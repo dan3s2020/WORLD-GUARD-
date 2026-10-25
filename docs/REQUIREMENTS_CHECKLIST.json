@@ -1,11 +1,12 @@
 {
   "project": "WORLD GUARD",
-  "releaseTarget": "Life Lab v0.2.x corrective acceptance",
+  "releaseTarget": "Earth sandbox v0.4 — game-first world acceptance",
   "verificationPolicy": "Only status=verified may render a checked checkbox or jump-to-feature button. Verified means a narrow demonstrated prototype capability, not the requested complete game.",
   "sources": {
     "foundation": "docs/CONVERSATION_VERBATIM_2026-10-24.md",
     "life": "docs/VERBATIM_ACTION_LIFE_SIMULATION_2026-10-24.md",
-    "feedback": "docs/verbatim/FEEDBACK_LIFE_LAB_V0.2_2026-10-25.md"
+    "feedback": "docs/verbatim/FEEDBACK_LIFE_LAB_V0.2_2026-10-25.md",
+    "sandbox": "docs/verbatim/GAME_REJECTION_2026-10-25.md"
   },
   "requirements": [
     {
@@ -15,7 +16,7 @@
       "source": "foundation",
       "status": "partial",
       "target": "train",
-      "evidence": "Existing Q-table learns toy reward decisions. No neural checkpoint training."
+      "evidence": "play.html uses a 1,174-parameter neural action-value model trained from executed world transitions. Laya/large-model fine-tuning remains absent."
     },
     {
       "id": "WG-002",
@@ -24,14 +25,16 @@
       "source": "foundation",
       "status": "partial",
       "target": "globe",
-      "evidence": "2.5D city projections exist; no autonomous visible walking avatars."
+      "evidence": "play.html is now a full-screen sandbox with free flight, first-person walking/jumping, streamed terrain, block placement/removal and moving residents. General-purpose physical interactions and richer task worlds remain incomplete."
     },
     {
       "id": "WG-003",
       "title": "Native interactive 3D world",
       "requirement": "Actual perspective 3D graphics with camera movement, geometry, physics and 3D agent bodies.",
       "source": "feedback",
-      "status": "missing"
+      "status": "partial",
+      "target": "game",
+      "evidence": "Three.js globe and continuous camera, deterministic worldwide terrain streaming, walk/fly controls, gravity, wall/block collisions and resident route obstruction. This is a compressed procedural Earth sandbox, not a general physics engine."
     },
     {
       "id": "WG-004",
@@ -40,7 +43,7 @@
       "source": "feedback",
       "status": "partial",
       "target": "globe",
-      "evidence": "Current dashboard responsive; 3D game is absent."
+      "evidence": "The game owns the complete viewport. Browser tests exercise 390px touch pinch and joystick movement, landscape and keyboard controls. Physical Android/iOS performance still needs device testing."
     },
     {
       "id": "WG-005",
@@ -49,7 +52,7 @@
       "source": "foundation",
       "status": "partial",
       "target": "globe",
-      "evidence": "Current globe is a simplified 2D projection, not a planet-scale engine."
+      "evidence": "Arbitrary coordinates are reachable across a compressed Earth-shaped globe with streamed grassland, highland, desert, snow and ocean scenery. Six districts contain persistent residents. Planet-wide society/economy and accurate Earth data remain incomplete."
     },
     {
       "id": "WG-006",
@@ -58,7 +61,7 @@
       "source": "life",
       "status": "verified",
       "target": "city",
-      "evidence": "Deterministic city-selection/view navigation in life-ui.mjs."
+      "evidence": "Earth button, globe picking and coordinate travel descend to arbitrary terrain or inhabited districts through the same perspective camera."
     },
     {
       "id": "WG-007",
@@ -92,7 +95,9 @@
       "title": "Visible, moving agent bodies",
       "requirement": "Each AI agent must move and perform simulated actions in the 3D world.",
       "source": "feedback",
-      "status": "missing"
+      "status": "partial",
+      "target": "apartment",
+      "evidence": "All residents have 3D bodies, waypoint walking, action poses and recorded positions. Rich task-specific body interaction and independent life behavior remain incomplete. tests/spatial.test.mjs checks arrival before action; browser test observes real movement."
     },
     {
       "id": "WG-011",
@@ -101,7 +106,7 @@
       "source": "life",
       "status": "partial",
       "target": "agent",
-      "evidence": "Stable state/schedule in a short synthetic day; no detailed family or physical life simulation."
+      "evidence": "New physical runtime continues across days and persists agent state/history. Detailed autonomous family life remains missing."
     },
     {
       "id": "WG-012",
@@ -137,7 +142,7 @@
       "source": "life",
       "status": "partial",
       "target": "agent",
-      "evidence": "Occupations and workplaces recorded as state, no physical traversal or rich social dynamics."
+      "evidence": "Physical residents now walk between furnished homes, offices and civic buildings. Job tasks remain finite synthetic choices."
     },
     {
       "id": "WG-016",
@@ -264,7 +269,7 @@
       "source": "foundation",
       "status": "partial",
       "target": "train",
-      "evidence": "Q-table updates visible in statistics, not a visible training neural agent."
+      "evidence": "Local UI shows actual neural loss, observations, gradient updates and synchronized motion. Public training stream remains absent."
     },
     {
       "id": "WG-031",
@@ -303,14 +308,16 @@
       "source": "life",
       "status": "partial",
       "target": "agent",
-      "evidence": "World has independent states, but one shared toy policy with no neural individuality."
+      "evidence": "Independent resident state and histories share one small neural policy. Separate per-agent weights/persona learning are not implemented."
     },
     {
       "id": "WG-036",
       "title": "Persistent training across restarts",
       "requirement": "Checkpoints survive app/process restart and training can continue.",
       "source": "life",
-      "status": "missing"
+      "status": "verified",
+      "target": "persistence",
+      "evidence": "IndexedDB/JSON retains the world, neural weights, movement replay, camera, block edits and resident obstacles. Reload starts paused; tests verify geometry/model restore."
     },
     {
       "id": "WG-037",
@@ -319,14 +326,16 @@
       "source": "life",
       "status": "verified",
       "target": "replay",
-      "evidence": "Snapshot ledger and timeline. Frame replay tested in sim/life.mjs."
+      "evidence": "Movement, decisions and block edits are replayable by index without rewriting the live model/world. Capacity stops instead of dropping early frames. Motion sampling is every 0.5 simulated seconds, not every render frame."
     },
     {
       "id": "WG-038",
       "title": "Watch live agent behavior",
       "requirement": "Camera follows moving actions while training runs, not just numerical events.",
       "source": "feedback",
-      "status": "missing"
+      "status": "verified",
+      "target": "follow",
+      "evidence": "play.html follows the selected resident while authoritative recorded coordinates change. Freeze-follow option retains the camera target. Browser movement and camera tests cover the feature."
     },
     {
       "id": "WG-039",
@@ -360,9 +369,9 @@
       "title": "Variable replay speeds",
       "requirement": "Playback slider and speed control for complete history.",
       "source": "life",
-      "status": "partial",
-      "target": "replay",
-      "evidence": "Speed applies to forward execution; full recorded frame playback is manual."
+      "status": "verified",
+      "target": "spatialReplay",
+      "evidence": "play.html replays all recorded movement and decision frames at 1x, 3x or 10x, without modifying live world state or model weights; browser test verifies immutability."
     },
     {
       "id": "WG-043",
@@ -439,7 +448,9 @@
       "title": "Open-source graphics engine selection",
       "requirement": "Choose an actual 3D engine independently of Laya, such as Three.js or Godot.",
       "source": "feedback",
-      "status": "missing"
+      "status": "verified",
+      "target": "game",
+      "evidence": "Bundled Three.js WebGL perspective globe, streamed chunk meshes, avatar bodies, interiors, wall/block collision and camera controls; no runtime CDN."
     },
     {
       "id": "WG-052",
@@ -457,7 +468,7 @@
       "source": "foundation",
       "status": "verified",
       "target": "train",
-      "evidence": "Q-learning benchmark works on held-out synthetic contexts; not sufficient for general agents."
+      "evidence": "Legacy Q-learning and new observed-outcome neural tests compare against seeded random baselines. New seed samples belong to the same finite scenario family, not unseen tasks."
     },
     {
       "id": "WG-054",
@@ -474,6 +485,42 @@
       "status": "partial",
       "target": "agent",
       "evidence": "36 independent profiles advance in lockstep, without meaningful causal multiagent interactions."
+    },
+    {
+      "id": "WG-056",
+      "title": "Explore arbitrary Earth coordinates",
+      "requirement": "The god-like observer can descend anywhere on the globe, beyond the six resident districts.",
+      "source": "sandbox",
+      "status": "verified",
+      "target": "explore",
+      "evidence": "Globe picking and validated latitude/longitude travel generate terrain around any visited point. Browser tests explore non-city coordinates and cross chunk boundaries."
+    },
+    {
+      "id": "WG-057",
+      "title": "Mobile movement inside the world",
+      "requirement": "Walk or fly through the 3D world using mobile controls, with camera look and ground movement.",
+      "source": "sandbox",
+      "status": "verified",
+      "target": "walk",
+      "evidence": "Touch joystick and directional alternatives, canvas look, free flight, first-person walking, jumping and keyboard controls. Browser tests send actual touch events and verify camera displacement."
+    },
+    {
+      "id": "WG-058",
+      "title": "Persistent block-building sandbox",
+      "requirement": "Minecraft-like placement and removal must change explorable geometry and persist/replay.",
+      "source": "sandbox",
+      "status": "verified",
+      "target": "build",
+      "evidence": "Place/remove/undo blocks. Blocks collide with the observer and obstruct resident routes. Browser tests verify creation, historical absence, live return and saved restoration."
+    },
+    {
+      "id": "WG-059",
+      "title": "Game-first default launch",
+      "requirement": "Opening the server root must enter the 3D game, with training details available on demand.",
+      "source": "sandbox",
+      "status": "verified",
+      "target": "game",
+      "evidence": "index.html routes to the full-viewport play.html. Training runs in the world; World/Lives/Replay open accessible overlays. The old dashboard is retained at infrastructure.html."
     }
   ]
 }

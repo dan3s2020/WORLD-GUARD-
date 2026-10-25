@@ -1,9 +1,0 @@
-{
-  "name": "worldguard-lab",
-  "version": "0.2.0",
-  "private": true,
-  "type": "module",
-  "description": "Synthetic multi-agent world safety laboratory with human authorization gates",
-  "scripts": {"test": "node scripts/build-life-bundle.mjs --check && node scripts/build-requirements.mjs --check && node --test tests/*.test.mjs", "build:life": "node scripts/build-life-bundle.mjs", "build:checklist": "node scripts/build-requirements.mjs", "train": "node scripts/train-cli.mjs", "train:life": "node scripts/train-life-cli.mjs"},
-  "license": "MIT"
-}
