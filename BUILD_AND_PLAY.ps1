@@ -7,7 +7,7 @@ Set-Location -LiteralPath $PSScriptRoot
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
     throw "Node.js/npm is required to compile the 3D game. Install Node.js 22 or newer."
 }
-if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+if (-not (Get-Command python -ErrorAction SilentlyContinue) -and -not (Get-Command py -ErrorAction SilentlyContinue)) {
     throw "Python 3 is required by START_3D.cmd to serve the game."
 }
 if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "node_modules"))) {
