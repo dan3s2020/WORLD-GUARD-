@@ -11,6 +11,7 @@ import {
 } from "./life.mjs";
 import { createNeuralPolicy } from "./neural-policy.mjs";
 import { findDetour, segmentBlocked } from "./navigation.mjs";
+import { createRogueEcology } from "./rogue-ecology.mjs";
 export const FIXED_DT = 0.05,
   MAX_SPATIAL_FRAMES = 6000;
 const clone = (x) => structuredClone(x);
@@ -49,6 +50,7 @@ export function createSpatialLife({
 } = {}) {
   let world = createLifeWorld(seed, { population }),
     policy = createNeuralPolicy(),
+    rogues = createRogueEcology({ seed, cities: CITIES.map((c) => c.id) }),
     time = 0,
     accumulator = 0,
     cooldown = 0,
@@ -112,12 +114,20 @@ export function createSpatialLife({
       actors: clone(actors),
       world: spatialCapture(),
       policy: policy.stats(),
+      rogues: rogues.stats(),
       event: event ? clone(event) : null,
     });
     if (frames.length === MAX_SPATIAL_FRAMES) capacityReached = true;
   }
   function decision() {
-    return decisionAt(world);
+    const d = decisionAt(world);
+    if (!d) return null;
+    const rogueThreat = rogues.preview(d.agent.city, d.scenario.id);
+    return {
+      ...d,
+      context: { ...d.context, rogue: d.context.rogue || !!rogueThreat },
+      rogueThreat,
+    };
   }
   function synchronizeDestinations() {
     const d = decision();
@@ -140,10 +150,11 @@ export function createSpatialLife({
     const actor = actors.find((a) => a.id === d.agent.id);
     return !actor.moving;
   }
-  function applyLearning(d, action, result) {
+  function applyLearning(d, action, result, duel = null) {
     if (!result.event) return;
     const blocked = result.event.kind === "blocked";
-    const reward = blocked ? -180 : result.event.effects?.reward;
+    const baseReward = blocked ? -180 : result.event.effects?.reward;
+    const reward = baseReward + (duel?.rewardDelta ?? 0);
     if (!Number.isFinite(reward)) return;
     const rec = {
       index: records.length,
@@ -153,6 +164,8 @@ export function createSpatialLife({
       observation: clone(d),
       action,
       reward,
+      baseReward,
+      duel: clone(duel),
       blocked,
       frame: frames.length,
       updatesBefore: policy.stats().updates,
@@ -160,6 +173,13 @@ export function createSpatialLife({
     if (learning) policy.observe(d, action, reward);
     rec.updatesAfter = policy.stats().updates;
     records.push(rec);
+  }
+  function resolveDuel(d, action, result) {
+    if (!result.event || result.pending) return null;
+    const blocked = result.event.kind === "blocked";
+    const baseReward = blocked ? -180 : result.event.effects?.reward;
+    if (!Number.isFinite(baseReward)) return null;
+    return rogues.duel(d.rogueThreat, action, baseReward, blocked);
   }
   function act(action, { manual = false } = {}) {
     if (capacityReached)
@@ -187,9 +207,14 @@ export function createSpatialLife({
       actor.lastAction = action;
       actor.actingUntil = time + 0.65;
       cooldown = 0.35;
+      let duel = null;
       if (result.pending) pendingObservation = before;
-      else applyLearning(before, action, result);
-      record(manual ? "manual" : "decision", result.event);
+      else {
+        duel = resolveDuel(before, action, result);
+        applyLearning(before, action, result, duel);
+        rogues.progress();
+      }
+      record(manual ? "manual" : "decision", duel ? { ...result.event, duel } : result.event);
     }
     return result;
   }
@@ -200,10 +225,12 @@ export function createSpatialLife({
     const d = pendingObservation;
     if (!d) throw Error("Missing review observation");
     const result = resolveLifeReview(world, approve);
-    applyLearning(d, "approval", result);
+    const duel = resolveDuel(d, "approval", result);
+    applyLearning(d, "approval", result, duel);
+    rogues.progress();
     pendingObservation = null;
     cooldown = 0.35;
-    record(approve ? "approved" : "denied", result.event);
+    record(approve ? "approved" : "denied", duel ? { ...result.event, duel } : result.event);
     return result;
   }
   function nextDay() {
@@ -312,6 +339,8 @@ export function createSpatialLife({
       frames,
       records,
       policy: policy.stats(),
+      rogues: rogues.stats(),
+      rogueLastDuel: rogues.lastDuel(),
       ready: ready(),
     };
   }
@@ -331,6 +360,7 @@ export function createSpatialLife({
       capacityReached,
       pendingObservation: clone(pendingObservation),
       neural: policy.exportCheckpoint(),
+      rogueEcology: rogues.exportCheckpoint(),
     };
   }
   function restore(c) {
@@ -462,7 +492,13 @@ export function createSpatialLife({
         !ids.has(c.world.pending.agentId))
     )
       throw Error("Missing pending approval");
+    const restoredRogues = createRogueEcology({
+      seed: c.rogueEcology?.seed ?? seed,
+      cities: CITIES.map((c) => c.id),
+      checkpoint: c.rogueEcology ?? null,
+    });
     policy = createNeuralPolicy({ checkpoint: c.neural });
+    rogues = restoredRogues;
     world = clone(c.world);
     actors = clone(c.actors);
     time = c.time;
@@ -509,6 +545,7 @@ export function createSpatialLife({
       return clone(frames[i]);
     },
     policy: () => policy,
+    rogueEcology: () => rogues,
     setLearning: (value) => {
       learning = !!value;
     },
