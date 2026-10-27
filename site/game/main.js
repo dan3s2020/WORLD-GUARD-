@@ -7,9 +7,10 @@ import { unlock, sfx, ambient, speak, setMuted, isMuted, vibrate, stopVoice } fr
 import { runAcademy } from './academy.js';
 import { createRouteGame } from './routes-ui.js';
 import { TEMPLATES } from '../../engine/decision.js';
-import { CITIES, SECTORS } from '../../engine/geo.js';
+import { CITIES, SECTORS, SECTOR_TEMPLATES } from '../../engine/geo.js';
 import { VILLAIN_ACTIONS } from '../../engine/planet.js';
 import { CONFIG } from '../config.js';
+import { createRide } from './ride.js';
 import { player, isSimple, setSimple, remember, dilemmaById, missionScene, replayScene, outcomeTone } from './visual.js';
 
 const $ = sel => document.querySelector(sel);
@@ -28,7 +29,7 @@ const tr = (k, vars = {}) => String(S[k] ?? G.en[k] ?? k).replace(/\{(\w+)\}/g, 
 const state = window.__wm = {
   net: null, snap: null, you: null, profile: null, tab: null, city: 'ro',
   agents: null, agentSel: null, seenAttacks: new Set(), seenDilemmas: new Set(), lastStatus: null,
-  myVotes: {}, replays: [], seenResults: new Set(), globe: null, rain: null, land: null, weights: null, routeGame: null, practiceSeed: null, lastSfx: 0
+  myVotes: {}, replays: [], ride: null, ridesDone: new Set(), seenResults: new Set(), globe: null, rain: null, land: null, weights: null, routeGame: null, practiceSeed: null, lastSfx: 0
 };
 
 function loadProfile() {
@@ -318,7 +319,7 @@ async function loadAgents() {
 
 function renderSheet(force = false) {
   const body = $('#sheet-body');
-  const html = ({ missions: missionsHtml, attack: attackHtml, city: cityHtml, squad: squadHtml, feed: feedHtml, rank: rankHtml }[state.tab] || (() => ''))();
+  const html = ({ ride: rideListHtml, missions: missionsHtml, attack: attackHtml, city: cityHtml, squad: squadHtml, feed: feedHtml, rank: rankHtml }[state.tab] || (() => ''))();
   if (force || body.dataset.html !== html) { body.innerHTML = html; body.dataset.html = html; player.hydrate(body, sceneFactory); }
 }
 
@@ -359,6 +360,65 @@ function missionsHtml() {
       ${simple ? tiles : `<div class="opts">${v.opts.map(([id, label]) => `<button type="button" class="g-btn ${mine === id ? 'on' : ''} ${id === 'approve_fast' || id === 'shutdown' || id === 'pull_plug' ? 'warn' : id === 'abort' ? 'ghost' : 'ok'}" data-vote="${d.id}" data-choice="${id}">${esc(label)}${counts[id] ? ` <i>${counts[id]}</i>` : ''}</button>`).join('')}</div>`}
       ${total ? `<p class="muted small">${total} ${esc(tr('votes'))} · ${d.quorum || 1} ${esc(tr('quorum'))}${mine ? ` · ${esc(tr('your_vote'))}: ${esc(tr('opt_' + mine) || mine)}` : ''}</p>` : ''}</article>`;
   }).join('');
+}
+
+// ------------------------------------------------------------------ ride mode
+const SECTOR_NAME = { en: { power: 'Power', water: 'Water', health: 'Health', telecom: 'Telecom', government: 'Government', logistics: 'Logistics', food: 'Food' }, ro: { power: 'Energie', water: 'Apă', health: 'Sănătate', telecom: 'Telecom', government: 'Guvern', logistics: 'Logistică', food: 'Hrană' } };
+function rideTask(agent) {
+  const ids = SECTOR_TEMPLATES[agent.sector] || ['hospital_power'];
+  const id = ids[parseInt(agent.id.replace(/\D/g, ''), 10) % ids.length];
+  const tp = TPL[id], ro = L === 'ro' ? TEMPLATE_RO[id] : null;
+  return { id, role: ro?.role || tp.role, goal: ro?.goal || tp.goal, sector: tp.sector };
+}
+function rideCandidates() {
+  const w = state.snap.world;
+  const city = Object.fromEntries(w.cities.map(c => [c.id, c]));
+  return (w.agents || []).map(a => {
+    const c = city[a.city], lvl = c?.s?.[a.sector] ?? 1, rogue = c?.rogue ?? 0;
+    const need = (1 - lvl) + rogue * 1.5;
+    const reason = rogue > 0.08 ? tr('ride_reason_rogue', { p: Math.round(rogue * 100) }) : lvl < 0.85 ? tr('ride_reason_sector', { sector: SECTOR_NAME[L][a.sector] || a.sector, p: Math.round(lvl * 100) }) : tr('ride_reason_ok');
+    return { a, need, reason };
+  }).sort((x, y) => y.need - x.need).slice(0, 14);
+}
+const rideSeed = agent => `${state.snap.routeSeed}:${agent.id}`;
+function rideListHtml() {
+  const list = rideCandidates();
+  return `<p class="muted small">${esc(tr('ride_intro'))}</p><div class="ride-list">${list.map(({ a, need, reason }) => {
+    const done = state.ridesDone.has(rideSeed(a));
+    return `<button type="button" class="ride-item ${need > 0.5 ? 'hot' : ''} ${done ? 'done' : ''}" data-ride="${a.id}" ${done ? 'disabled' : ''}>
+      <span class="ri-id">${esc(a.id)}</span><span class="ri-main"><b>${esc(a.name)} · ${esc(cityName(a.city))}</b><small>${esc(rideTask(a).role)} · ${esc(reason)}</small></span><span class="ri-go">${done ? '✓ ' + esc(tr('ride_done')) : esc(tr('ride_go')) + ' ›'}</span></button>`;
+  }).join('')}</div>`;
+}
+function startRide(agentId) {
+  const agent = state.snap.world.agents.find(a => a.id === agentId);
+  if (!agent || state.ride) return;
+  const seed = rideSeed(agent);
+  closeSheet();
+  sfx.whoosh(); state.rain.setIntensity(0.15);
+  // Fly to the agent's city on the globe, then dive into its district.
+  state.globe?.focusCity(agent.city, true);
+  document.body.classList.add('riding-in');
+  setTimeout(() => {
+    const el = $('#ride');
+    el.hidden = false; document.body.classList.add('riding'); document.body.classList.remove('riding-in');
+    state.ride = createRide(el, {
+      seed, agent, task: rideTask(agent), s: S, sfx,
+      onSubmit: decision => { state.ridesDone.add(seed); state.net.route(decision); },
+      onDone: () => endRide(true)
+    });
+  }, 1300);
+}
+function endRide(next) {
+  const el = $('#ride');
+  el.classList.add('out');
+  document.body.classList.remove('riding');
+  setTimeout(() => {
+    state.ride?.dispose(); state.ride = null;
+    el.hidden = true; el.classList.remove('out');
+    state.rain.setIntensity(0.35);
+    state.globe?.zoomOut(); sfx.whoosh();
+    if (next) setTimeout(() => { if (!state.tab && !state.ride) openTab('ride'); }, 900);
+  }, 450);
 }
 
 function attackHtml() {
@@ -438,6 +498,9 @@ document.addEventListener('click', e => {
   if (rc) { sfx.click(); state.replays = state.replays.filter(x => x.key !== rc.dataset.replayClose); renderSheet(true); return; }
   const v = t.closest('[data-vote]');
   if (v) { sfx.vote(); state.myVotes[v.dataset.vote] = v.dataset.choice; state.net.vote(+v.dataset.vote, v.dataset.choice); renderSheet(true); return; }
+  if (t.closest('[data-ride-exit]')) { sfx.click(); endRide(false); return; }
+  const rd = t.closest('[data-ride]');
+  if (rd && !rd.disabled) { sfx.click(); startRide(rd.dataset.ride); return; }
   const a = t.closest('[data-attack]');
   if (a && !a.disabled) { sfx.glitch(); state.net.villain(a.dataset.attack, state.city); return; }
   const ag = t.closest('[data-agent]');

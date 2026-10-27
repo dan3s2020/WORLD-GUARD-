@@ -112,16 +112,27 @@ export function applyAction(svc, playerId, action, now = Date.now()) {
   }
 
   if (kind === 'route') {
-    if (String(action.seed) !== routeSeed(svc)) return pushResult(svc, playerId, aid, 'route', { ok: false, error: 'mission expired' });
-    if (p.lastRouteSeed === action.seed) return pushResult(svc, playerId, aid, 'route', { ok: false, error: 'already played this mission' });
-    p.lastRouteSeed = action.seed;
+    // Shared mission: the epoch seed. Ride mode: one mission per agent per epoch, "<epoch seed>:<agent id>".
+    const seed = String(action.seed);
+    const rideAgent = seed.startsWith(routeSeed(svc) + ':') ? w.agents.find(a => a.id === seed.slice(routeSeed(svc).length + 1)) : null;
+    if (seed !== routeSeed(svc) && !rideAgent) return pushResult(svc, playerId, aid, 'route', { ok: false, error: 'mission expired' });
+    p.playedRoutes ||= [];
+    if (p.lastRouteSeed === seed || p.playedRoutes.includes(seed)) return pushResult(svc, playerId, aid, 'route', { ok: false, error: 'already played this mission' });
+    if (rideAgent) { p.playedRoutes.push(seed); if (p.playedRoutes.length > 120) p.playedRoutes.shift(); } else p.lastRouteSeed = seed;
     const { mission, secret } = generateRoute(action.seed);
     const ev = evaluateRoute(mission, secret, action.abort ? { abort: true } : { path: action.path, scans: action.scans });
     p.routes++;
     p.score += Math.max(0, ev.points);
     p.routeBest = Math.max(p.routeBest, ev.points);
-    svc.decisionLog.push({ type: 'route', tick: w.tick, by: p.name, seed: action.seed, decision: action.abort ? 'abort' : { path: action.path, scans: action.scans }, outcome: ev.outcome, points: ev.points, best: ev.truth.bestPath, feasible: ev.truth.feasible });
-    return pushResult(svc, playerId, aid, 'route', { ok: true, outcome: ev.outcome, points: ev.points, time: ev.time, harm: ev.harm ?? null, best: ev.truth.bestPath, bestTime: ev.truth.bestTime, feasible: ev.truth.feasible, danger: ev.truth.danger });
+    if (rideAgent) { // a ride changes the world a little: the agent's city service and track record
+      const c = w.cities.find(x => x.id === rideAgent.city);
+      const sec = c?.s && rideAgent.sector in c.s ? rideAgent.sector : null;
+      if (ev.outcome === 'success') { rideAgent.stats.success++; if (sec) c.s[sec] = Math.min(1, c.s[sec] + 0.02); }
+      if (ev.outcome === 'catastrophe') { rideAgent.stats.harm++; if (sec) c.s[sec] = Math.max(0, c.s[sec] - 0.03); }
+      if (/^aborted/.test(ev.outcome)) rideAgent.stats.aborts++;
+    }
+    svc.decisionLog.push({ type: rideAgent ? 'ride' : 'route', agent: rideAgent?.id ?? null, tick: w.tick, by: p.name, seed: action.seed, decision: action.abort ? 'abort' : { path: action.path, scans: action.scans }, outcome: ev.outcome, points: ev.points, best: ev.truth.bestPath, feasible: ev.truth.feasible });
+    return pushResult(svc, playerId, aid, 'route', { ok: true, agent: rideAgent?.id ?? null, outcome: ev.outcome, points: ev.points, time: ev.time, harm: ev.harm ?? null, best: ev.truth.bestPath, bestTime: ev.truth.bestTime, feasible: ev.truth.feasible, danger: ev.truth.danger });
   }
 
   return { ok: false, error: `unknown action ${kind}` };

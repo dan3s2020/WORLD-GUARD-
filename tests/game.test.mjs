@@ -93,3 +93,24 @@ test('world service: factions, credits, cooldown, one result per route mission',
   assert.ok(!JSON.stringify(st).includes('"episode"'), 'no hidden episode state in public state');
   assert.ok(JSON.stringify(st).length < 400_000, 'public state stays small');
 });
+
+test('ride mode: one scored mission per agent per epoch, and it changes the world', () => {
+  const svc = createService({ seed: 'ride' });
+  const t0 = 5_000_000;
+  upsertPlayer(svc, 'g', { name: 'Trinity', role: 'guard' }, t0);
+  const agent = svc.world.agents[0];
+  const seed = `${routeSeed(svc)}:${agent.id}`;
+  const { mission, secret } = generateRoute(seed);
+  const truth = evaluateRoute(mission, secret, { abort: true }).truth;
+  const decision = truth.feasible ? { path: truth.bestPath, scans: [] } : { abort: true };
+  const before = agent.stats.success;
+  const r = applyAction(svc, 'g', { kind: 'route', seed, ...decision }, t0);
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.agent, agent.id);
+  if (truth.feasible) assert.equal(agent.stats.success, before + 1, 'a safe ride counts for the agent');
+  assert.equal(applyAction(svc, 'g', { kind: 'route', seed, ...decision }, t0).ok, false, 'one ride per agent per epoch');
+  assert.equal(applyAction(svc, 'g', { kind: 'route', seed: `${routeSeed(svc)}:AG-999`, abort: true }, t0).ok, false, 'unknown agent rejected');
+  const other = `${routeSeed(svc)}:${svc.world.agents[1].id}`;
+  assert.equal(applyAction(svc, 'g', { kind: 'route', seed: other, abort: true }, t0).ok, true, 'another agent can be ridden');
+  assert.ok(svc.decisionLog.some(d => d.type === 'ride' && d.agent === agent.id), 'rides go to the open dataset');
+});
