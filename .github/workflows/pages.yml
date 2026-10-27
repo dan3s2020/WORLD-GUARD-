@@ -18,7 +18,7 @@ jobs:
         env: { WORLDMATRIX_DOMAIN: "${{ vars.WORLDMATRIX_DOMAIN }}" }
         run: |
           mkdir _site
-          cp -r index.html favicon.svg manifest.webmanifest play site engine vendor data docs legacy LICENSE _site/
+          cp -r index.html favicon.svg manifest.webmanifest play arena demos site engine vendor data docs legacy LICENSE _site/
           [ -n "$WORLDMATRIX_DOMAIN" ] && echo "$WORLDMATRIX_DOMAIN" > _site/CNAME || true
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
