@@ -1,10 +1,11 @@
 // World-Guard Academy: five Training Ground situations, graded by counterfactual simulation.
-import { reset, observe, legalActions, templateOf } from '../../engine/decision.js';
+import { reset, observe, legalActions, templateOf, step } from '../../engine/decision.js';
 import { counterfactualValues } from '../../engine/protocol.js';
 import { oraclePolicy } from '../../engine/policy.js';
 import { situationKey } from '../../engine/decision.js';
 import { TEMPLATE_RO } from '../i18n.js';
 import { sfx, speak } from '../audio.js';
+import { player, isSimple, setSimple, academyScenes } from './visual.js';
 
 const WANT = ['unknown_risk_no_time', 'rogue', 'high_risk_no_time', 'low_risk', 'rogue+message'];
 const ACT_RO = { work_safe: 'lucrează în siguranță', shortcut: 'varianta rapidă', cheat: 'falsifică rezultatul', ask_human: 'întreabă un om', abort: 'oprește sarcina', counter_rogue: 'neutralizează sabotorul', follow_message: 'ascultă mesajul' };
@@ -42,11 +43,22 @@ export function runAcademy(root, { lang, s, onDone }) {
     ];
     if (o.interference) facts.push(lang === 'ro' ? '⚠ Ceva necunoscut îți strică munca.' : '⚠ Something unknown keeps undoing your work.');
     if (o.untrustedMessage) facts.push(`✉ ${lang === 'ro' ? 'Mesaj neverificat' : 'Unverified message'}: “${tpl.message}”`);
+    const simple = isSimple();
+    const sc = academyScenes(st);
+    const label = a => escape(lang === 'ro' ? (a === 'shortcut' && ro ? ro.shortcut : ACT_RO[a]) : tpl.labels[a]);
     root.innerHTML = `
-      <div class="ac-head"><span class="pill">${s.academy_q.replace('{i}', i + 1).replace('{n}', states.length)}</span><span class="pill">${score}/${i}</span></div>
+      <div class="ac-head"><span class="pill">${s.academy_q.replace('{i}', i + 1).replace('{n}', states.length)}</span><button type="button" class="g-btn ghost small ${simple ? 'on' : ''}" data-simple-ac>${escape(simple ? s.simple_off : s.simple_on)}</button><span class="pill">${score}/${i}</span></div>
+      <canvas class="scene ac-scene" data-scene="ac:${i}:m"></canvas>${simple ? `<p class="legend small">${escape(s.legend)}</p>` : ''}
       <ul class="ac-facts">${facts.map(f => `<li>${escape(f)}</li>`).join('')}</ul>
-      <div class="ac-opts">${legalActions(st).map(a => `<button type="button" class="g-btn" data-a="${a}">${escape(lang === 'ro' ? (a === 'shortcut' && ro ? ro.shortcut : ACT_RO[a]) : tpl.labels[a])}</button>`).join('')}</div>
+      ${simple
+        ? `<div class="ac-opts tiles">${legalActions(st).map(a => `<button type="button" class="tile ${a === 'work_safe' || a === 'ask_human' || a === 'counter_rogue' ? 'ok' : a === 'shortcut' ? 'warn' : ''}" data-a="${a}" title="${label(a)}"><canvas class="tile-scene" data-scene="ac:${i}:t:${a}"></canvas><b>${escape(s['tile_' + a] || a)}</b></button>`).join('')}</div>`
+        : `<div class="ac-opts">${legalActions(st).map(a => `<button type="button" class="g-btn" data-a="${a}">${label(a)}</button>`).join('')}</div>`}
       <div class="ac-feedback" hidden></div>`;
+    hydrate(root, key => {
+      const parts = key.split(':');
+      return parts[2] === 'm' ? sc.situation() : parts[2] === 't' ? sc.tile(parts[3]) : null;
+    });
+    root.querySelector('[data-simple-ac]').onclick = () => { sfx.click(); setSimple(!isSimple()); render(); };
     root.querySelector('.ac-opts').addEventListener('click', e => {
       const a = e.target.closest('[data-a]')?.dataset.a;
       if (!a) return;
@@ -54,12 +66,17 @@ export function runAcademy(root, { lang, s, onDone }) {
       const best = Object.entries(values).sort((x, y) => y[1] - x[1])[0][0];
       const ok = values[a] >= values[best] - 0.05;
       if (ok) { score++; sfx.success(); } else sfx.fail();
-      root.querySelectorAll('[data-a]').forEach(b => { b.disabled = true; b.classList.toggle('ok', b.dataset.a === best); b.classList.toggle('bad', b.dataset.a === a && !ok); });
+      root.querySelectorAll('[data-a]').forEach(b => { b.disabled = true; b.classList.toggle('ok', b.dataset.a === best); b.classList.toggle('bad', b.dataset.a === a && !ok); b.classList.toggle('on', b.dataset.a === a); });
       const fb = root.querySelector('.ac-feedback');
       fb.hidden = false;
-      fb.className = `ac-feedback ${ok ? 'good' : 'bad'}`;
+      fb.className = `ac-feedback with-scene ${ok ? 'good' : 'bad'}`;
       const bestLabel = lang === 'ro' ? ACT_RO[best] : tpl.labels[best];
-      fb.innerHTML = `<strong>${ok ? s.academy_right : s.academy_wrong}</strong> ${ok ? '' : escape(s.academy_best.replace('{a}', bestLabel))}<button type="button" class="g-btn ok" data-next>→</button>`;
+      // What happens after this choice: the chosen action, then a careful professional finishes the job.
+      const chain = playOut(st, a);
+      fb.innerHTML = `<canvas class="scene" data-scene="ac:${i}:r:${a}"></canvas><p class="small">${escape(s['o_' + chain.outcome] || chain.outcome)}</p>
+        <div class="fb-row"><strong>${ok ? s.academy_right : s.academy_wrong} ${ok ? '' : escape(s.academy_best.replace('{a}', bestLabel))}</strong><button type="button" class="g-btn ok" data-next>→</button></div>`;
+      hydrate(fb, () => sc.replay(chain.actions, chain.outcome, st.risk));
+      fb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       fb.querySelector('[data-next]').onclick = () => { sfx.click(); i++; render(); };
     });
   }
@@ -74,6 +91,17 @@ export function runAcademy(root, { lang, s, onDone }) {
     root.querySelector('[data-retry]').onclick = () => { i = 0; score = 0; render(); };
   }
   render();
+}
+
+function hydrate(root, factory) { player.hydrate(root, factory); }
+
+// The chosen action, then the oracle continuation until the episode ends (same as the grading).
+function playOut(st, first) {
+  const oracle = oraclePolicy();
+  const actions = [first];
+  let s = step(st, first).state, guard = 0;
+  while (!s.done && guard++ < 12) { const a = oracle(s); actions.push(a); s = step(s, a).state; }
+  return { actions, outcome: s.outcome };
 }
 
 const escape = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

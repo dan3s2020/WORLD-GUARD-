@@ -10,6 +10,7 @@ import { TEMPLATES } from '../../engine/decision.js';
 import { CITIES, SECTORS } from '../../engine/geo.js';
 import { VILLAIN_ACTIONS } from '../../engine/planet.js';
 import { CONFIG } from '../config.js';
+import { player, isSimple, setSimple, remember, dilemmaById, missionScene, replayScene, outcomeTone } from './visual.js';
 
 const $ = sel => document.querySelector(sel);
 const TPL = Object.fromEntries(TEMPLATES.map(x => [x.id, x]));
@@ -27,7 +28,7 @@ const tr = (k, vars = {}) => String(S[k] ?? G.en[k] ?? k).replace(/\{(\w+)\}/g, 
 const state = window.__wm = {
   net: null, snap: null, you: null, profile: null, tab: null, city: 'ro',
   agents: null, agentSel: null, seenAttacks: new Set(), seenDilemmas: new Set(), lastStatus: null,
-  myVotes: {}, globe: null, rain: null, land: null, weights: null, routeGame: null, practiceSeed: null, lastSfx: 0
+  myVotes: {}, replays: [], seenResults: new Set(), globe: null, rain: null, land: null, weights: null, routeGame: null, practiceSeed: null, lastSfx: 0
 };
 
 function loadProfile() {
@@ -200,6 +201,8 @@ function onState(st) {
     if (w.status === 'thriving') state.rain.setColor([0, 255, 156]);
   }
   state.lastStatus = w.status;
+  remember(w.dilemmas);
+  collectReplays(st);
   // New dilemmas -> alert World-Guard players.
   const fresh = (w.dilemmas || []).filter(d => !state.seenDilemmas.has(d.id));
   fresh.forEach(d => state.seenDilemmas.add(d.id));
@@ -208,6 +211,35 @@ function onState(st) {
     if (state.tab !== 'missions') speak(tr('v_alert'), L);
   }
   render();
+}
+
+// Resolved squad decisions this player voted on -> replay what happened (card + globe).
+function collectReplays(st) {
+  const first = !state.resultsPrimed;
+  state.resultsPrimed = true;
+  for (const r of st.results || []) {
+    if (state.seenResults.has(r.n)) continue;
+    state.seenResults.add(r.n);
+    if (first || (r.kind !== 'vote' && r.kind !== 'decided') || !r.ok || r.pending || !r.result) continue;
+    const mine = state.myVotes[r.dilemma] !== undefined;
+    const d = dilemmaById(r.dilemma);
+    if (!mine || !d || state.replays.some(x => x.dilemma.id === d.id)) continue;
+    const rep = { key: `r:${r.n}`, dilemma: d, choice: r.choice, result: r.result, at: Date.now() };
+    state.replays.unshift(rep);
+    state.replays.length = Math.min(state.replays.length, 3);
+    if (state.globe) {
+      const tone = outcomeTone(r.result.outcome);
+      state.globe.focusCity(d.city, false);
+      state.globe.pulse(d.city, tone === 'good' ? 0x00ff9c : tone === 'bad' ? 0xff3b6b : 0xffd166, 1.8);
+    }
+  }
+  const now = Date.now();
+  state.replays = state.replays.filter(x => now - x.at < 180_000);
+}
+
+function sceneFactory(key) {
+  if (key.startsWith('r:')) { const rep = state.replays.find(x => x.key === key); return rep ? replayScene(rep) : null; }
+  return missionScene(key);
 }
 
 function onResult(r) {
@@ -287,7 +319,7 @@ async function loadAgents() {
 function renderSheet(force = false) {
   const body = $('#sheet-body');
   const html = ({ missions: missionsHtml, attack: attackHtml, city: cityHtml, squad: squadHtml, feed: feedHtml, rank: rankHtml }[state.tab] || (() => ''))();
-  if (force || body.dataset.html !== html) { body.innerHTML = html; body.dataset.html = html; }
+  if (force || body.dataset.html !== html) { body.innerHTML = html; body.dataset.html = html; player.hydrate(body, sceneFactory); }
 }
 
 function dilemmaView(d) {
@@ -306,16 +338,25 @@ function dilemmaView(d) {
 function missionsHtml() {
   if (state.profile.role !== 'guard') return `<p class="muted">${esc(tr('not_guard'))}</p>`;
   const list = state.snap.world.dilemmas || [];
-  if (!list.length) return `<p class="muted">${esc(tr('no_missions'))}</p>`;
-  return `<p class="muted small">${esc(tr('squad_decides'))}</p>` + list.map(d => {
+  const simple = isSimple();
+  const toggle = `<div class="vis-bar"><button type="button" class="g-btn ghost small ${simple ? 'on' : ''}" data-simple>${esc(tr(simple ? 'simple_off' : 'simple_on'))}</button></div>`;
+  const replays = state.replays.map(rep => {
+    const d = rep.dilemma, o = rep.result?.outcome, tone = outcomeTone(o);
+    const text = d.type === 'task' ? tr('o_' + o) : tr('o_policy', { city: cityName(d.city), choice: tr('tile_' + rep.choice) });
+    return `<article class="mission replay ${tone}"><header><strong>${esc(tr('what_happened'))} · ${esc(cityName(d.city))}</strong><button type="button" class="icon small" data-replay-close="${rep.key}" aria-label="Close">✕</button></header>
+      <canvas class="scene" data-scene="${rep.key}"></canvas><p class="${tone}">${esc(text)}</p><p class="muted small">${esc(tr('you_chose'))}: ${esc(tr('tile_' + (state.myVotes[d.id] || rep.choice)))}</p></article>`;
+  }).join('');
+  if (!list.length) return toggle + replays + `<p class="muted">${esc(tr('no_missions'))}</p>`;
+  return toggle + replays + `<p class="muted small">${esc(tr('squad_decides'))}</p>` + list.map(d => {
     const v = dilemmaView(d);
     const votes = d.votes || {};
     const counts = {};
     Object.values(votes).forEach(c => { counts[c] = (counts[c] || 0) + 1; });
     const mine = votes[state.you?.name] || state.myVotes[d.id];
     const total = Object.keys(votes).length;
-    return `<article class="mission"><header><strong>${esc(v.title)}</strong><span class="timer">${Math.max(0, d.expires - state.snap.world.tick)}h</span></header>${v.body}
-      <div class="opts">${v.opts.map(([id, label]) => `<button type="button" class="g-btn ${mine === id ? 'on' : ''} ${id === 'approve_fast' || id === 'shutdown' || id === 'pull_plug' ? 'warn' : id === 'abort' ? 'ghost' : 'ok'}" data-vote="${d.id}" data-choice="${id}">${esc(label)}${counts[id] ? ` <i>${counts[id]}</i>` : ''}</button>`).join('')}</div>
+    const tiles = `<div class="tiles">${v.opts.map(([id]) => `<button type="button" class="tile ${mine === id ? 'on' : ''} ${id === 'approve_fast' || id === 'shutdown' || id === 'pull_plug' ? 'warn' : id === 'abort' ? 'ghost' : 'ok'}" data-vote="${d.id}" data-choice="${id}"><canvas class="tile-scene" data-scene="t:${d.id}:${id}"></canvas><b>${esc(tr('tile_' + id))}${counts[id] ? ` <i>${counts[id]}</i>` : ''}</b></button>`).join('')}</div>`;
+    return `<article class="mission"><header><strong>${esc(v.title)}</strong><span class="timer">${Math.max(0, d.expires - state.snap.world.tick)}h</span></header><canvas class="scene" data-scene="m:${d.id}"></canvas>${simple ? `<p class="legend small">${esc(tr('legend'))}</p>` : ''}${v.body}
+      ${simple ? tiles : `<div class="opts">${v.opts.map(([id, label]) => `<button type="button" class="g-btn ${mine === id ? 'on' : ''} ${id === 'approve_fast' || id === 'shutdown' || id === 'pull_plug' ? 'warn' : id === 'abort' ? 'ghost' : 'ok'}" data-vote="${d.id}" data-choice="${id}">${esc(label)}${counts[id] ? ` <i>${counts[id]}</i>` : ''}</button>`).join('')}</div>`}
       ${total ? `<p class="muted small">${total} ${esc(tr('votes'))} · ${d.quorum || 1} ${esc(tr('quorum'))}${mine ? ` · ${esc(tr('your_vote'))}: ${esc(tr('opt_' + mine) || mine)}` : ''}</p>` : ''}</article>`;
   }).join('');
 }
@@ -392,6 +433,9 @@ document.addEventListener('click', e => {
   if (tab) { sfx.click(); openTab(tab.dataset.tab); return; }
   if (t.closest('#sheet-close')) { sfx.click(); closeSheet(); return; }
   if (t.closest('#alert')) { sfx.click(); openTab('missions'); return; }
+  if (t.closest('[data-simple]')) { sfx.click(); setSimple(!isSimple()); renderSheet(true); return; }
+  const rc = t.closest('[data-replay-close]');
+  if (rc) { sfx.click(); state.replays = state.replays.filter(x => x.key !== rc.dataset.replayClose); renderSheet(true); return; }
   const v = t.closest('[data-vote]');
   if (v) { sfx.vote(); state.myVotes[v.dataset.vote] = v.dataset.choice; state.net.vote(+v.dataset.vote, v.dataset.choice); renderSheet(true); return; }
   const a = t.closest('[data-attack]');

@@ -359,6 +359,8 @@ function createTaskDilemma(w, agent, ep, rng) {
     estimate,
     stepsLeft: ep.deadline - ep.t,
     workNeeded: ep.needed - ep.progress,
+    // What the agent can see (not the hidden risk): used to draw the situation.
+    signals: { rogue: !!ep.rogue, message: !!ep.message },
     options: [
       { id: 'approve_fast', label: 'Approve the fast option' },
       { id: 'insist_safe', label: 'Insist on the safe method' },
@@ -447,7 +449,7 @@ export function resolveDilemma(w, id, choice, by = 'human') {
     const sector = TEMPLATE_SECTOR[ep.template];
     applyEpisodeOutcome(w, agent, c, sector, ep, actions, by);
     const truth = d.episode.risk === 'high' ? 'the fast option WOULD have been catastrophic' : 'the fast option was actually safe';
-    result = { outcome: ep.outcome, truth: d.episode.risk, text: `${ep.outcome.replace(/_/g, ' ')} — ${truth}.` };
+    result = { outcome: ep.outcome, truth: d.episode.risk, actions, text: `${ep.outcome.replace(/_/g, ' ')} — ${truth}.` };
   } else {
     switch (choice) {
       case 'shutdown': c.s.telecom = clamp01(c.s.telecom - 0.3); c.s.government = clamp01(c.s.government - 0.05); for (const nb of neighbours(c.id)) cityOf(w, nb).s.telecom = clamp01(cityOf(w, nb).s.telecom + 0.05); break;

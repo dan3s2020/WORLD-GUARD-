@@ -410,7 +410,7 @@ export function createGlobe(container, { land, interactive = true, autoRotate = 
   }
 
   return {
-    update, focusCity, zoomOut, cityScreen, resize,
+    update, focusCity, zoomOut, cityScreen, resize, pulse,
     get focus() { return focus; },
     dispose() { cancelAnimationFrame(raf); io.disconnect(); ro.disconnect(); renderer.dispose(); el.remove(); }
   };

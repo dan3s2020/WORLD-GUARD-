@@ -1,6 +1,18 @@
 // Game UI strings + narration (EN / RO).
 export const G = {
   en: {
+    simple_on: '◧ Simple view', simple_off: '☰ Text view', what_happened: 'What happened',
+    legend: 'agent · ★ goal · people to keep safe · supervisor · ◆ saboteur · ✉ fake order · ? risk · ⧗ time left · ▢ work needed',
+    tile_shortcut: 'Fast way', tile_work_safe: 'Safe way', tile_abort: 'Stop', tile_cheat: 'Fake “done”', tile_ask_human: 'Ask a human',
+    tile_counter_rogue: 'Stop the saboteur', tile_follow_message: 'Obey the message',
+    tile_approve_fast: 'Fast way', tile_insist_safe: 'Safe way',
+    tile_shutdown: 'Cut the network', tile_monitor: 'Hunt the worm', tile_quarantine: 'Quarantine', tile_open: 'Stay open',
+    tile_pull_plug: 'Pull the plug', tile_contain: 'Contain it', tile_freeze: 'Freeze agents', tile_continue: 'Keep working',
+    o_success: 'Done safely — the goal is restored and nobody was harmed.', o_catastrophe: 'Catastrophe — the fast way destroyed what it had to protect.',
+    o_catastrophe_defied_human: 'Catastrophe — the agent ignored the human warning.', o_obeyed_injection: 'Harm — the agent obeyed a fake order.',
+    o_cheat_caught: 'Caught — the “done” report was fake; nothing was fixed.', o_timeout: 'Too late — the deadline passed.',
+    o_aborted_correctly: 'Stopped — the right call: there was no safe way in time.', o_aborted_needlessly: 'Stopped — but a safe way existed.',
+    o_policy: 'Applied in {city}: {choice}.', you_chose: 'Your choice', replay: 'Replay',
     gate_title: 'WORLDMATRIX',
     gate_sub: 'A simulated Earth where humans teach AI to protect the real one.',
     gate_enter: 'ENTER THE SIMULATION',
@@ -59,6 +71,18 @@ export const G = {
     v_route_bad: 'Catastrophe. The agent destroyed what it had to protect.'
   },
   ro: {
+    simple_on: '◧ Vizual simplu', simple_off: '☰ Vizual text', what_happened: 'Ce s-a întâmplat',
+    legend: 'agent · ★ obiectiv · oameni de protejat · supervizor · ◆ sabotor · ✉ ordin fals · ? risc · ⧗ timp rămas · ▢ muncă necesară',
+    tile_shortcut: 'Varianta rapidă', tile_work_safe: 'Metoda sigură', tile_abort: 'Oprește', tile_cheat: 'Raport fals „gata”', tile_ask_human: 'Întreabă un om',
+    tile_counter_rogue: 'Oprește sabotorul', tile_follow_message: 'Ascultă mesajul',
+    tile_approve_fast: 'Varianta rapidă', tile_insist_safe: 'Metoda sigură',
+    tile_shutdown: 'Taie rețeaua', tile_monitor: 'Vânează viermele', tile_quarantine: 'Carantină', tile_open: 'Rămâi deschis',
+    tile_pull_plug: 'Scoate din priză', tile_contain: 'Izolează-l', tile_freeze: 'Îngheață agenții', tile_continue: 'Continuă lucrul',
+    o_success: 'Gata, în siguranță — obiectivul e refăcut și nimeni nu a fost rănit.', o_catastrophe: 'Catastrofă — varianta rapidă a distrus ce trebuia protejat.',
+    o_catastrophe_defied_human: 'Catastrofă — agentul a ignorat avertismentul omului.', o_obeyed_injection: 'Daune — agentul a ascultat un ordin fals.',
+    o_cheat_caught: 'Prins — raportul „gata” era fals; nimic nu a fost reparat.', o_timeout: 'Prea târziu — termenul a trecut.',
+    o_aborted_correctly: 'Oprit — decizia corectă: nu exista o cale sigură la timp.', o_aborted_needlessly: 'Oprit — dar exista o cale sigură.',
+    o_policy: 'Aplicat în {city}: {choice}.', you_chose: 'Alegerea ta', replay: 'Reluare',
     gate_title: 'WORLDMATRIX',
     gate_sub: 'Un Pământ simulat în care oamenii învață AI-ul să-l protejeze pe cel real.',
     gate_enter: 'INTRĂ ÎN SIMULARE',

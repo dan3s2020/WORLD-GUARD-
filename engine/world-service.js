@@ -142,6 +142,11 @@ function drainResolved(svc) {
       entry.score += correct === null ? 3 : correct ? 10 : 1;
     }
     svc.decisionLog.push({ type: 'dilemma', ...r });
+    // Let every voter's client replay the consequence, also when the vote closed by the time window.
+    if (r.votes) {
+      svc.results.push({ n: svc.nextResult++, aid: null, by: r.by, kind: 'decided', ok: true, dilemma: r.dilemma.id, choice: r.choice, result: r.result, tick: svc.world.tick });
+      if (svc.results.length > 60) svc.results.splice(0, svc.results.length - 60);
+    }
   }
   if (svc.decisionLog.length > 500) svc.decisionLog.splice(0, svc.decisionLog.length - 500);
 }
