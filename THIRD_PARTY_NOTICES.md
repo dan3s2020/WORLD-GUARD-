@@ -1,7 +1,12 @@
-# Third-party software
+# Third-party notices
 
-The standalone `game.bundle.js` contains Three.js 0.186.1, copyright 2010–2026 Three.js Authors, under the MIT license. The bundled license comment is preserved. The complete upstream license is included in `docs/licenses/THREE-MIT.txt`.
+| Component | Version | License | Location |
+|---|---|---|---|
+| Three.js | r170 (`build/three.module.min.js`, git tag `r170`) | MIT | `vendor/three/` (license: `vendor/three/LICENSE`) |
+| Natural Earth 1:110m land | nvkelso/natural-earth-vector @ `ca96624` | Public domain | `data/land-110m.json` (simplified rings), terms: `data/NATURAL-EARTH-LICENSE.md` |
 
-Build tooling: esbuild 0.25.12 (MIT). Browser verification: Playwright 1.56.1 (Apache-2.0). These tools do not execute in the delivered game runtime. See the exact dependency lockfile and each installed package's license.
+`data/land-110m.json` keeps only the outer ring of each land polygon, rounded to 0.1°. It is used for the globe texture, the land dot cloud and the intro animation.
 
-The v0.4 globe and terrain land mask use Natural Earth 1:110m land coastlines (public domain), bundled in `sim/earth-land.mjs`; provenance and terms are in `docs/licenses/NATURAL-EARTH.md`. Procedural elevations, biomes, structures and game scale are independent of that dataset. The legacy Life Lab retains its earlier repository-native silhouettes.
+No other third-party code is shipped. Optional Python extras (`python[train]`: TRL, Transformers, Datasets, PEFT, Accelerate) are installed by the user under their own licenses.
+
+The v4.0 notices are archived at `docs/history/THIRD_PARTY_NOTICES_v4.0.md`.

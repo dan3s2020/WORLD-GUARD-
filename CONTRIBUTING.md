@@ -1,11 +1,29 @@
-# Contributing to WORLD GUARD
+# Contributing to WorldGuard
 
-The currently maintained implementation is only `index.html`. Its original content must remain the baseline for future change reviews.
+Thanks for helping. A few principles keep the project trustworthy:
 
-Read the user requirements and verbatim feedback under `docs/` before changing behavior. Make minimal diffs, preserve unchanged code, explain the exact modifications, and verify changes in desktop and mobile browsers. Do not re-introduce legacy simulators, bundles, training backends or their tests without a specific request.
+1. **One engine.** Rules live only in `engine/`. The website, server, CLI and Python package must not re-implement them.
+2. **Measure, don't claim.** New behaviour comes with a test; new training claims come with held-out numbers (`node cli/worldguard.mjs eval`). Never hard-code progress, curves or scores.
+3. **Keep the founding intent.** Read `docs/CONVERSATION_VERBATIM_2026-10-24.md`, `docs/VERBATIM_ACTION_LIFE_SIMULATION_2026-10-24.md` and `docs/verbatim/` before changing behaviour. Update `docs/REQUIREMENTS_CHECKLIST.json` honestly (verified / partial / missing).
+4. **Abstract threats only.** Villain and rogue mechanics are game abstractions. Do not add real exploit code, malware techniques, or biological/chemical procedures.
+5. **No real-world side effects.** The simulator never controls real systems, credentials, devices or payments.
 
-The app presently imports browser libraries from CDNs, so use a simple static HTTP server to run it. Historical tests and build scripts were removed with the previous implementations; do not claim that `npm test` or `npm run train` verifies this baseline.
+## Getting started
 
-Never connect an educational simulation to real assets, devices, public services, malicious automation or payments by default. Real inference, actual training metrics and multiplayer require separate implementations and validation.
+```bash
+npm test                 # engine + server
+npm run test:py          # Python package
+npm run test:browser     # headless browser smoke test (needs: pip install playwright && playwright install chromium)
+npm start                # http://localhost:8787
+```
 
-The previous contributing instructions are preserved unchanged in `docs/history/CONTRIBUTING_LEGACY.md`.
+No build step and no runtime dependencies. If you change `engine/decision.js` or the trainer, retrain the shipped checkpoint with `node cli/worldguard.mjs train` and include the new held-out numbers in your PR.
+
+## Good first contributions
+
+* New task families (templates) and translations (`site/i18n.js`)
+* Real-model benchmark results (`python -m worldguard eval …`)
+* Laya / other decision-model adapters behind `engine/protocol.js`
+* Accessibility and mobile polish
+
+The previous contributing rules for the v4.0 single-file simulator are archived in `docs/history/`.
