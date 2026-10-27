@@ -270,3 +270,32 @@ body.riding-in #rain { opacity: .3; }
 .ri-main small { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ri-go { color: var(--m); font-size: 12px; }
 .ride-item.hot .ri-go { color: var(--amber); }
+
+/* ---------- ride v2: autonomous agent, picture choices ---------- */
+.ride-top { grid-template-columns: 1fr auto; }
+.ride-badge { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ride-badge .rb-job { font-size: 26px; line-height: 1; filter: drop-shadow(0 0 8px rgba(255,255,255,.35)); }
+.ride-badge b { color: var(--m); font-size: 15px; letter-spacing: .06em; }
+.ride-time span { font-size: 12px; }
+.ride-choices { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 10px calc(18px + env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; background: linear-gradient(0deg, rgba(0,0,0,.85), rgba(0,0,0,0)); animation: resIn2 .25s ease-out both; }
+.ride-choices[hidden] { display: none; }
+@keyframes resIn2 { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+.rc { position: relative; width: 84px; height: 96px; border-radius: 22px; border: 2px solid var(--m-line); background: rgba(0, 20, 11, .85); color: var(--text); display: grid; place-items: center; align-content: center; gap: 2px; cursor: pointer; font-family: var(--mono); animation: bob 1.4s ease-in-out infinite; }
+.rc:nth-child(2) { animation-delay: .15s; } .rc:nth-child(3) { animation-delay: .3s; } .rc:nth-child(4) { animation-delay: .45s; }
+@keyframes bob { 50% { transform: translateY(-4px); } }
+.rc:active { transform: scale(.92); }
+.rc .rc-i { font-size: 34px; line-height: 1; }
+.rc small { font-size: 11px; color: var(--amber); }
+.rc i { font-style: normal; font-size: 11px; letter-spacing: .04em; color: #cfffe9; }
+.rc-ok { border-color: var(--m); box-shadow: 0 0 18px rgba(0,255,156,.35); }
+.rc-risk { border-color: var(--amber); box-shadow: 0 0 18px rgba(255,209,102,.3); }
+.rc-bad { border-color: var(--red); box-shadow: 0 0 18px rgba(255,59,107,.35); }
+.rc-scan { border-color: #7fd8ff; }
+.rc-stop { border-color: rgba(255,255,255,.3); }
+.rc-ring { position: absolute; left: 10%; bottom: 8px; height: 3px; width: 80%; background: var(--amber); border-radius: 2px; transition: width .1s linear; }
+.ride-result .rr-big { font-size: 56px; line-height: 1; }
+.ride-result .rr-pts { font-size: 22px; font-weight: 800; color: var(--amber); }
+.ri-job { font-size: 26px; line-height: 1; width: 34px; text-align: center; }
+.ri-need { display: block; height: 4px; border-radius: 2px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 4px; }
+.ri-need em { display: block; height: 100%; background: linear-gradient(90deg, var(--amber), var(--red)); }
+.ri-go { font-size: 18px; }

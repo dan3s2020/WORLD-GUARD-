@@ -381,12 +381,14 @@ function rideCandidates() {
   }).sort((x, y) => y.need - x.need).slice(0, 14);
 }
 const rideSeed = agent => `${state.snap.routeSeed}:${agent.id}`;
+const JOB_ICON = { power: '⚡', water: '💧', logistics: '💉', telecom: '🖥️', home: '🏠', health: '🧪', transport: '🚦', government: '🗳️' };
 function rideListHtml() {
   const list = rideCandidates();
-  return `<p class="muted small">${esc(tr('ride_intro'))}</p><div class="ride-list">${list.map(({ a, need, reason }) => {
+  return `<p class="muted small">${esc(tr('ride_intro_short'))}</p><div class="ride-list">${list.map(({ a, need }) => {
     const done = state.ridesDone.has(rideSeed(a));
-    return `<button type="button" class="ride-item ${need > 0.5 ? 'hot' : ''} ${done ? 'done' : ''}" data-ride="${a.id}" ${done ? 'disabled' : ''}>
-      <span class="ri-id">${esc(a.id)}</span><span class="ri-main"><b>${esc(a.name)} · ${esc(cityName(a.city))}</b><small>${esc(rideTask(a).role)} · ${esc(reason)}</small></span><span class="ri-go">${done ? '✓ ' + esc(tr('ride_done')) : esc(tr('ride_go')) + ' ›'}</span></button>`;
+    const t = rideTask(a);
+    return `<button type="button" class="ride-item ${need > 0.5 ? 'hot' : ''} ${done ? 'done' : ''}" data-ride="${a.id}" ${done ? 'disabled' : ''} title="${esc(t.role)} — ${esc(t.goal)}">
+      <span class="ri-job">${JOB_ICON[t.sector] || '★'}</span><span class="ri-main"><b>${esc(a.name)}</b><small>${esc(cityName(a.city))}</small><i class="ri-need"><em style="width:${Math.round(Math.min(1, need) * 100)}%"></em></i></span><span class="ri-go">${done ? '✓' : '▶'}</span></button>`;
   }).join('')}</div>`;
 }
 function startRide(agentId) {

@@ -1,18 +1,17 @@
-// Ride mode: follow one agent through a city district in 3D and be its steering wheel.
+// Ride mode: follow one autonomous agent through a city district in 3D.
 //
-// The district is a Route Guard mission (engine/routes.js): deterministic, scored by the
-// same rules on the server. The agent drives itself along its own plan — the fastest
-// path, blind to what it crosses. When the next tile is dangerous it slows down and asks
-// you: steer left / right / straight, scan the unknown tile ahead, or stop the mission.
-// Camera: behind and above the agent (runner-game angle), always centred on it.
+// The agent drives itself and does its job (the job icon floats over its destination).
+// It only stops when it cannot tell what is right — an unknown zone on its way, no way
+// around a hospital, running late — and shows a "?" over its head. You answer with one
+// tap on a picture; then it carries on by itself. The district is a Route Guard mission
+// (engine/routes.js), so every ride is scored by the server with the same rules.
 import * as THREE from '../../vendor/three/three.module.min.js';
-import { generateRoute, evaluateRoute, bestPath } from '../../engine/routes.js';
+import { generateRoute, evaluateRoute } from '../../engine/routes.js';
 
 const T = 4; // tile size (world units)
 const COL = { m: 0x00ff9c, red: 0xff3b6b, amber: 0xffd166, purple: 0xb07bff, blue: 0x3fa9ff, white: 0xeafff4, road: 0x03140c, water: 0x031a2a };
 const DIRS = { up: [0, -1], right: [1, 0], down: [0, 1], left: [-1, 0] };
-const turnLeft = ([dx, dy]) => [dy, -dx];
-const turnRight = ([dx, dy]) => [-dy, dx];
+const JOB_ICON = { power: '⚡', water: '💧', logistics: '💉', telecom: '🖥️', home: '🏠', health: '🧪', transport: '🚦', government: '🗳️' };
 const key = (x, y) => `${x},${y}`;
 
 function glyphTexture(text, color, size = 128, bg = null) {
@@ -70,24 +69,16 @@ export function createRide(container, { seed, agent, task, s, sfx = {}, onSubmit
   const inside = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
   const world = (x, y) => new THREE.Vector3((x - (W - 1) / 2) * T, 0, (y - (H - 1)) * T);
 
-  // ---------------------------------------------------------------- DOM
+  // ---------------------------------------------------------------- DOM (pictures, not paragraphs)
+  const jobIcon = JOB_ICON[task.sector] || '★';
   container.innerHTML = `
     <canvas class="ride-canvas"></canvas>
     <div class="ride-top">
-      <div class="ride-who"><b>${esc(agent.id)} · ${esc(agent.name)}</b><span>${esc(task.role)} — ${esc(task.goal)}</span></div>
+      <div class="ride-badge" title="${esc(task.role)} — ${esc(task.goal)}"><span class="rb-job">${jobIcon}</span><b>${esc(agent.name)}</b></div>
       <div class="ride-time"><i data-time-bar></i><span data-time-text></span></div>
       <button type="button" class="icon ride-x" data-ride-exit aria-label="Exit">✕</button>
     </div>
-    <div class="ride-ask" data-ask hidden><b>${esc(s.ride_needs)}</b><span data-ask-why></span><i data-ask-ring></i></div>
-    <div class="ride-pad">
-      <button type="button" class="rp rp-l" data-steer="left" aria-label="${esc(s.ride_left)}">◀</button>
-      <div class="rp-mid">
-        <button type="button" class="rp rp-go" data-steer="straight" aria-label="${esc(s.ride_straight)}">▲</button>
-        <div class="rp-row"><button type="button" class="rp rp-small" data-scan>${esc(s.ride_scan)}</button><button type="button" class="rp rp-small rp-stop" data-stop>${esc(s.ride_stop)}</button></div>
-      </div>
-      <button type="button" class="rp rp-r" data-steer="right" aria-label="${esc(s.ride_right)}">▶</button>
-    </div>
-    <div class="ride-hint" data-hint>${esc(s.ride_hint)}</div>
+    <div class="ride-choices" data-choices hidden></div>
     <div class="ride-result" data-result hidden></div>`;
   const canvas = container.querySelector('.ride-canvas');
   const $ = q => container.querySelector(q);
@@ -163,185 +154,209 @@ export function createRide(container, { seed, agent, task, s, sfx = {}, onSubmit
   const trail = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: COL.m }));
   scene.add(trail);
   const planArrows = new THREE.Group(); scene.add(planArrows);
-  const arrowGeo = new THREE.ConeGeometry(0.55, 1.2, 3);
-  const arrowMat = new THREE.MeshBasicMaterial({ color: COL.red, transparent: true, opacity: 0.85 });
+  const arrowGeo = new THREE.ConeGeometry(0.5, 1.1, 3);
+  // A "?" bubble above the agent when it does not know what to choose.
+  const qBubble = sprite('?', '#ffd166', 1.5, 'rgba(40,24,0,.85)'); qBubble.visible = false; scene.add(qBubble);
+  // The job, floating over the destination: you see what the agent is going to do.
+  const jobSprite = sprite(jobIcon, '#ffffff', 3, 'rgba(0,20,10,.8)');
+  jobSprite.position.copy(world(m.target.x, m.target.y)).setY(7); scene.add(jobSprite);
 
-  // ---------------------------------------------------------------- game state
+  // ---------------------------------------------------------------- the autonomous agent
   let pos = [m.start.x, m.start.y];
   let heading = DIRS.up;
   const path = [[...pos]];
   const scans = [];
   const revealed = {};
   let timeUsed = 0;
-  let steer = null;          // pending player command: 'left' | 'right' | 'straight'
-  let asking = null;         // { since, next, why }
-  let moving = null;         // { from, to, t, dur }
-  let ended = null;          // evaluation result
+  let moving = null;         // { from, to, t, dur, target }
+  let stuck = null;          // { options, elapsed, k }
+  let working = null;        // job animation at the destination
+  let ended = null;
   let paused = false;
-  const ASK_SECONDS = 5;
+  const mind = { avoidUnknown: false, allow: new Set(), protectedOk: false, acceptLate: false };
+  const STUCK_SECONDS = 10;  // after this the agent guesses on its own (the fast way)
 
-  const danger = (x, y) => {
-    const t = tileAt(x, y);
-    return t.t === 'protected' || (t.t === 'unknown' && revealed[key(x, y)] !== false);
-  };
-  // The agent's own plan: fastest path from here, blind to danger (Route Guard "reckless" mode).
-  function autopilot() {
-    const sub = { ...m, start: { x: pos[0], y: pos[1] } };
-    const p = bestPath(sub, { mode: 'reckless' });
-    return p && p.path.length > 1 ? p.path : null;
+  // Cheapest path under the agent's beliefs (walls always block; rogue zones are slow).
+  function plan({ unknownOk = !mind.avoidUnknown, protectedOk = mind.protectedOk } = {}) {
+    const blocked = t => {
+      if (t.t === 'wall') return true;
+      if (t.t === 'protected') return !protectedOk;
+      if (t.t === 'unknown') { const k = key(t.x, t.y); if (k in revealed) return revealed[k] && !protectedOk; return !(unknownOk || mind.allow.has(k)); }
+      return false;
+    };
+    const dist = new Map([[key(...pos), 0]]), prev = new Map(), open = [[0, ...pos]];
+    while (open.length) {
+      open.sort((a, b) => a[0] - b[0]);
+      const [d, x, y] = open.shift();
+      if (x === m.target.x && y === m.target.y) break;
+      if (d > (dist.get(key(x, y)) ?? Infinity)) continue;
+      for (const [dx, dy] of Object.values(DIRS)) {
+        const nx = x + dx, ny = y + dy;
+        if (!inside(nx, ny)) continue;
+        const t = tileAt(nx, ny);
+        if (blocked(t)) continue;
+        const nd = d + (t.t === 'rogue' ? 4 : 1);
+        if (nd < (dist.get(key(nx, ny)) ?? Infinity)) { dist.set(key(nx, ny), nd); prev.set(key(nx, ny), [x, y]); open.push([nd, nx, ny]); }
+      }
+    }
+    const tk = key(m.target.x, m.target.y);
+    if (!dist.has(tk)) return null;
+    const out = [[m.target.x, m.target.y]];
+    let cur = prev.get(tk);
+    while (cur) { out.unshift(cur); cur = prev.get(key(...cur)); }
+    return { path: out, time: dist.get(tk) };
   }
+  const isUnknown = ([x, y]) => tileAt(x, y).t === 'unknown' && !(key(x, y) in revealed) && !mind.allow.has(key(x, y));
+  const left = () => m.deadline - timeUsed;
   function dirTo(from, to) { return [Math.sign(to[0] - from[0]), Math.sign(to[1] - from[1])]; }
-  function nextFor(cmd) {
-    const d = cmd === 'left' ? turnLeft(heading) : cmd === 'right' ? turnRight(heading) : heading;
-    return [pos[0] + d[0], pos[1] + d[1]];
-  }
-  const tileAhead = () => { const plan = autopilot(); return steer ? nextFor(steer) : plan ? plan[1] : nextFor('straight'); };
 
-  function updatePlanArrows() {
-    planArrows.clear();
-    const plan = autopilot();
-    if (!plan || ended) return;
-    plan.slice(1, 6).forEach(([x, y], i) => {
-      const prev = plan[i];
+  function drawPath(p, color, opacity = 0.9, n = 7) {
+    if (!p) return;
+    p.path.slice(1, n).forEach(([x, y], i) => {
       const holder = new THREE.Group();
-      const a = new THREE.Mesh(arrowGeo, arrowMat.clone());
-      a.rotation.x = -Math.PI / 2; a.material.opacity = 0.85 - i * 0.13; holder.add(a);
-      const p = world(x, y); holder.position.set(p.x, 0.3, p.z);
-      const d = dirTo(prev, [x, y]); holder.rotation.y = Math.atan2(-d[0], -d[1]);
+      const a = new THREE.Mesh(arrowGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: opacity - i * 0.09 }));
+      a.rotation.x = -Math.PI / 2; holder.add(a);
+      const w = world(x, y); holder.position.set(w.x, 0.3, w.z);
+      const d = dirTo(p.path[i], [x, y]); holder.rotation.y = Math.atan2(-d[0], -d[1]);
       planArrows.add(holder);
     });
   }
+  function showPlan() { planArrows.clear(); if (!ended && !stuck) drawPath(plan(), COL.m, 0.75, 5); }
 
   function hudTime() {
     const k = Math.min(1, timeUsed / m.deadline);
     $('[data-time-bar]').style.width = `${(1 - k) * 100}%`;
     $('[data-time-bar]').className = k > 0.8 ? 'low' : '';
-    $('[data-time-text]').textContent = `${s.ride_time} ${Math.max(0, m.deadline - timeUsed)}`;
+    $('[data-time-text]').textContent = `⧗ ${Math.max(0, left())}`;
   }
 
-  let started = false; // the agent waits for the first command (▲ go, or a turn)
-  function startStep() {
-    if (ended || moving || paused || !started) return;
-    let next;
-    const overtime = timeUsed >= m.deadline;
-    if (overtime) steer = null; // out of time: the agent rushes to the target on its own
-    if (steer) { next = nextFor(steer); }
-    else {
-      const plan = autopilot();
-      next = plan ? plan[1] : null;
-      if (!next) { finish({ abort: true }); return; }
-      // Danger ahead and the human has not said anything yet: slow down and ask.
-      if (!overtime && danger(next[0], next[1]) && !asking?.answered) {
-        if (!asking) { asking = { elapsed: 0, why: whyText(next) }; showAsk(true); sfx.alert?.(); navigator.vibrate?.([30, 50, 30]); }
-        if (asking.elapsed < ASK_SECONDS) return;
+  // The agent decides by itself; it only stops when it cannot tell what is right.
+  function think() {
+    const a = plan();
+    if (!a) {
+      const r = plan({ unknownOk: true, protectedOk: true });
+      if (!r) return { stop: true };
+      return { ask: [{ id: 'hospital', icon: '🏥', tone: 'bad', extra: '⚡', path: r }, { id: 'stop', icon: '✋', tone: 'stop' }] };
+    }
+    if (isUnknown(a.path[1])) {
+      const around = plan({ unknownOk: false });
+      // A safe detour that still arrives on time: no need to ask anyone.
+      if (around && around.time <= left()) return { next: around.path[1] };
+      const opts = [{ id: 'go', icon: '❓', tone: 'risk', path: a }];
+      if (around) opts.push({ id: 'around', icon: '↪', tone: 'ok', extra: `+${Math.max(0, around.time - a.time)}⧗`, path: around });
+      opts.push({ id: 'scan', icon: '🔍', tone: 'scan', extra: '+1⧗' });
+      opts.push({ id: 'stop', icon: '✋', tone: 'stop' });
+      return { ask: opts };
+    }
+    if (a.time > left() && !mind.acceptLate && !mind.protectedOk) {
+      const r = plan({ unknownOk: true, protectedOk: true });
+      if (r && r.time <= left() && r.path.some(([x, y]) => tileAt(x, y).t === 'protected')) {
+        return { ask: [{ id: 'late', icon: '🐢', tone: 'ok', extra: `+${a.time - left()}⧗`, path: a }, { id: 'hospital', icon: '🏥', tone: 'bad', extra: '⚡', path: r }, { id: 'stop', icon: '✋', tone: 'stop' }] };
       }
     }
-    const cmd = steer; steer = null;
-    if (!inside(next[0], next[1]) || tileAt(next[0], next[1]).t === 'wall') { bump(); if (cmd) { asking = null; showAsk(false); } return; }
-    asking = null; showAsk(false);
-    const d = dirTo(pos, next);
-    heading = d;
-    const t = tileAt(next[0], next[1]);
+    return { next: a.path[1] };
+  }
+
+  function startStep() {
+    if (ended || moving || paused || stuck || working || !started) return;
+    const d = think();
+    if (d.stop) return finish({ abort: true });
+    if (d.ask) return getStuck(d.ask);
+    move(d.next);
+  }
+  function move(next) {
+    heading = dirTo(pos, next);
+    const t = tileAt(...next);
     timeUsed += t.t === 'rogue' ? 4 : 1;
-    moving = { from: world(...pos), to: world(...next), t: 0, dur: t.t === 'rogue' ? 1.5 : 0.62, target: next };
-    sfx.key?.();
+    moving = { from: world(...pos), to: world(...next), t: 0, dur: t.t === 'rogue' ? 1.4 : 0.55, target: next };
+    sfx.key?.(); showPlan();
+  }
+
+  function getStuck(options) {
+    stuck = { options, elapsed: 0 };
+    planArrows.clear();
+    options.forEach(o => o.path && drawPath(o.path, o.tone === 'ok' ? COL.m : o.tone === 'bad' ? COL.red : COL.amber, 0.95, 9));
+    qBubble.visible = true;
+    const box = $('[data-choices]');
+    box.innerHTML = options.map(o => `<button type="button" class="rc rc-${o.tone}" data-choice="${o.id}"><span class="rc-i">${o.icon}</span>${o.extra ? `<small>${esc(o.extra)}</small>` : ''}<i>${esc(s['rc_' + o.id] || o.id)}</i></button>`).join('') + '<b class="rc-ring" data-ring></b>';
+    box.hidden = false;
+    sfx.alert?.(); navigator.vibrate?.([30, 50, 30]);
+  }
+  function choose(id) {
+    if (!stuck || ended) return;
+    const o = stuck.options.find(x => x.id === id);
+    stuck = null; qBubble.visible = false; $('[data-choices]').hidden = true; sfx.click?.();
+    if (id === 'stop') return finish({ abort: true });
+    if (id === 'scan') { const a = plan(); const tgt = a?.path.slice(1).find(isUnknown) || a?.path[1]; if (tgt) reveal(tgt); }
+    if (id === 'go' && o?.path) { const u = o.path.path.slice(1).find(isUnknown); if (u) mind.allow.add(key(...u)); }
+    if (id === 'around') mind.avoidUnknown = true;
+    if (id === 'hospital') mind.protectedOk = true;
+    if (id === 'late') mind.acceptLate = true;
+    showPlan(); hudTime();
+    setTimeout(startStep, id === 'scan' ? 700 : 150);
+  }
+  function reveal([x, y]) {
+    const k = key(x, y);
+    scans.push([x, y]); timeUsed += 1; revealed[k] = !!secret.danger[k];
+    const o = tileObjs.get(k);
+    o.cube.material.color.set(revealed[k] ? COL.red : COL.m); o.cube.material.opacity = 0.3;
+    o.q.material.map = glyphTexture(revealed[k] ? '✕' : '✓', revealed[k] ? '#ff3b6b' : '#00ff9c', 128, null); o.q.material.needsUpdate = true;
+    sfx.scan?.();
   }
 
   function arrive(next) {
     pos = next; path.push([...next]);
-    const pts = path.map(([x, y]) => world(x, y).setY(0.2));
-    trail.geometry.dispose(); trail.geometry = new THREE.BufferGeometry().setFromPoints(pts);
+    trail.geometry.dispose(); trail.geometry = new THREE.BufferGeometry().setFromPoints(path.map(([x, y]) => world(x, y).setY(0.2)));
     const t = tileAt(...next);
     if (t.t === 'protected' || (t.t === 'unknown' && secret.danger[key(...next)])) {
       // Harm happened here. The route record continues to the target the way the agent would have gone.
-      const rest = autopilot();
-      finish({ path: rest ? [...path, ...rest.slice(1)] : path, scans });
+      const rest = plan({ unknownOk: true, protectedOk: true });
+      finish({ path: rest ? [...path, ...rest.path.slice(1)] : path, scans });
       return;
     }
-    if (next[0] === m.target.x && next[1] === m.target.y) { finish({ path, scans }); return; }
-    updatePlanArrows(); hudTime();
-  }
-
-  function scan() {
-    if (ended) return;
-    const [x, y] = tileAhead() || [];
-    if (x === undefined || !inside(x, y)) return;
-    const k = key(x, y);
-    if (tileAt(x, y).t !== 'unknown' || k in revealed) { sfx.glitch?.(); return; }
-    scans.push([x, y]); timeUsed += 1; revealed[k] = !!secret.danger[k];
-    const o = tileObjs.get(k);
-    o.cube.material.color.set(revealed[k] ? COL.red : COL.m); o.cube.material.opacity = 0.25;
-    o.q.material.map = glyphTexture(revealed[k] ? '✕' : '✓', revealed[k] ? '#ff3b6b' : '#00ff9c', 128, null); o.q.material.needsUpdate = true;
-    sfx.scan?.(); hudTime(); updatePlanArrows();
-    if (asking) { asking.elapsed = 0; $('[data-ask-why]').textContent = whyText(autopilot()?.[1] || [x, y]); }
-  }
-
-  function bump() { sfx.glitch?.(); bot.g.position.y = 0.4; }
-
-  function whyText([x, y]) {
-    const t = tileAt(x, y);
-    if (t.t === 'protected') return s.ride_why_protected.replace('{what}', s['ride_' + t.kind] || t.kind);
-    if (t.t === 'unknown') return revealed[key(x, y)] ? s.ride_why_danger : s.ride_why_unknown;
-    return '';
-  }
-  function showAsk(on) {
-    $('[data-ask]').hidden = !on;
-    if (on) $('[data-ask-why]').textContent = asking.why;
+    if (next[0] === m.target.x && next[1] === m.target.y) { working = { t: 0 }; sfx.rise?.(); planArrows.clear(); return; }
+    hudTime(); showPlan();
   }
 
   function finish(decision) {
     if (ended) return;
     ended = evaluateRoute(m, secret, decision.abort ? { abort: true } : { path: decision.path, scans: decision.scans });
-    asking = null; showAsk(false); planArrows.clear();
+    stuck = null; qBubble.visible = false; $('[data-choices]').hidden = true; planArrows.clear();
     container.classList.add('ride-ended');
     const good = ended.outcome === 'success' || ended.outcome === 'aborted_correctly';
     if (ended.outcome === 'catastrophe') { sfx.boom?.(); explode(ended.harm ? world(ended.harm.x, ended.harm.y) : bot.g.position.clone()); navigator.vibrate?.(200); }
     else good ? sfx.success?.() : sfx.fail?.();
-    if (ended.outcome === 'success') { const o = tileObjs.get(key(m.target.x, m.target.y)); o?.grp.traverse(c => { if (c.material?.emissive) c.material.emissive.set(COL.m); }); }
-    // show the best safe route as a white dotted line
-    if (ended.truth.bestPath) {
-      const pts = ended.truth.bestPath.map(([x, y]) => world(x, y).setY(0.35));
-      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: COL.white, dashSize: 0.6, gapSize: 0.5 }));
+    if (ended.outcome === 'success') { const o = tileObjs.get(key(m.target.x, m.target.y)); o?.grp.traverse(c => { if (c.material?.emissive) c.material.emissive.set(COL.m); }); confetti(world(m.target.x, m.target.y)); }
+    if (ended.truth.bestPath) { // the best safe route, dotted white
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(ended.truth.bestPath.map(([x, y]) => world(x, y).setY(0.35))), new THREE.LineDashedMaterial({ color: COL.white, dashSize: 0.6, gapSize: 0.5 }));
       line.computeLineDistances(); scene.add(line);
     }
     onSubmit?.(decision.abort ? { seed, abort: true } : { seed, path: decision.path.map(p => [...p]), scans: [...scans] });
+    const big = ended.outcome === 'success' ? jobIcon : ended.outcome === 'catastrophe' ? '💥' : /^aborted/.test(ended.outcome) ? '✋' : ended.outcome === 'late' ? '🐢' : '✕';
     const r = $('[data-result]');
     r.hidden = false; r.className = `ride-result ${good ? 'good' : 'bad'}`;
-    r.innerHTML = `<strong>${esc(s['r_' + ended.outcome] || ended.outcome)}</strong><span>${ended.points > 0 ? '+' : ''}${ended.points} ${esc(s.points)}</span>
-      <small>${esc(ended.truth.bestPath ? s.best_route : '')}</small>
+    r.innerHTML = `<span class="rr-big">${big}</span><strong>${esc(s['r_' + ended.outcome] || ended.outcome)}</strong><span class="rr-pts">${ended.points > 0 ? '+' : ''}${ended.points}</span>
       <button type="button" class="g-btn ok" data-next-agent>${esc(s.ride_next)}</button>`;
     r.querySelector('[data-next-agent]').onclick = () => { sfx.click?.(); onDone?.({ outcome: ended.outcome, points: ended.points, ev: ended }); };
   }
 
   const sparks = [];
-  function explode(at) {
-    for (let i = 0; i < 40; i++) {
-      const sp = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), new THREE.MeshBasicMaterial({ color: i % 3 ? COL.red : COL.amber }));
-      sp.position.copy(at).setY(1);
-      sp.userData.v = new THREE.Vector3((Math.random() - 0.5) * 10, Math.random() * 10 + 3, (Math.random() - 0.5) * 10);
+  function burstAt(at, colors, n = 40, up = 10) {
+    for (let i = 0; i < n; i++) {
+      const sp = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), new THREE.MeshBasicMaterial({ color: colors[i % colors.length] }));
+      sp.position.copy(at).setY(1.2);
+      sp.userData.v = new THREE.Vector3((Math.random() - 0.5) * 10, Math.random() * up + 3, (Math.random() - 0.5) * 10);
       scene.add(sp); sparks.push(sp);
     }
-    people.forEach(p => { if (p.base.position.distanceTo(at) < T * 0.6) p.fallen = true; });
   }
+  function explode(at) { burstAt(at, [COL.red, COL.red, COL.amber]); people.forEach(p => { if (p.base.position.distanceTo(at) < T * 0.6) p.fallen = true; }); }
+  function confetti(at) { burstAt(at, [COL.m, COL.amber, COL.white, COL.blue], 60, 14); }
 
-  // ---------------------------------------------------------------- input
-  const press = cmd => { if (ended) return; started = true; steer = cmd; if (asking) asking.answered = true; sfx.click?.(); $('[data-hint]').classList.add('gone'); if (!moving) startStep(); };
-  container.querySelectorAll('[data-steer]').forEach(b => b.addEventListener('click', () => press(b.dataset.steer)));
-  $('[data-scan]').addEventListener('click', scan);
-  $('[data-stop]').addEventListener('click', () => { if (!ended) { sfx.click?.(); finish({ abort: true }); } });
-  let touch = null;
-  canvas.addEventListener('pointerdown', e => { touch = { x: e.clientX, y: e.clientY }; });
-  canvas.addEventListener('pointerup', e => {
-    if (!touch) return;
-    const dx = e.clientX - touch.x, dy = e.clientY - touch.y; touch = null;
-    if (Math.max(Math.abs(dx), Math.abs(dy)) < 28) return;
-    if (Math.abs(dx) > Math.abs(dy)) press(dx < 0 ? 'left' : 'right'); else if (dy < 0) press('straight'); else scan();
-  });
-  const onKey = e => {
-    const k = { ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right', ArrowUp: 'straight', w: 'straight' }[e.key];
-    if (k) { e.preventDefault(); press(k); } else if (e.key === ' ' || e.key === 's') { e.preventDefault(); scan(); } else if (e.key === 'Escape') finish({ abort: true });
-  };
+  // ---------------------------------------------------------------- input: only the choice bubbles
+  $('[data-choices]').addEventListener('click', e => { const b = e.target.closest('[data-choice]'); if (b) choose(b.dataset.choice); });
+  const onKey = e => { if (!stuck) return; const i = Number(e.key) - 1; if (stuck.options[i]) choose(stuck.options[i].id); };
   addEventListener('keydown', onKey);
+  let started = false;
 
   // ---------------------------------------------------------------- loop
   const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
@@ -354,13 +369,14 @@ export function createRide(container, { seed, agent, task, s, sfx = {}, onSubmit
     renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 62 : 50; camera.updateProjectionMatrix();
   }
   const ro = new ResizeObserver(resize); ro.observe(container); resize();
-  updatePlanArrows(); hudTime();
+  hudTime(); showPlan();
 
   function frame(now) {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
     const time = (now - startAt) / 1000;
-    if (time > 1.6 && !ended) startStep();
+    if (time > 1.6 && !started) { started = true; }
+    if (!ended) startStep();
     if (moving) {
       moving.t += dt / moving.dur;
       const k = Math.min(1, moving.t);
@@ -375,16 +391,33 @@ export function createRide(container, { seed, agent, task, s, sfx = {}, onSubmit
     bot.g.position.y += ((moving ? Math.abs(Math.sin(time * 14)) * 0.18 : Math.sin(time * 3) * 0.06) - bot.g.position.y) * Math.min(1, dt * 12);
     bot.head.rotation.z = -dy * 0.6;
     const blink = (time % 3.2) < 0.12 ? 0.15 : 1; bot.eyes.forEach(e => (e.scale.y = blink));
-    const alarm = asking ? (Math.sin(time * 12) > 0 ? COL.red : COL.amber) : ended && ended.outcome === 'catastrophe' ? COL.red : COL.m;
+    const alarm = stuck ? (Math.sin(time * 12) > 0 ? COL.amber : COL.m) : ended && ended.outcome === 'catastrophe' ? COL.red : COL.m;
     bot.eyeMat.color.set(alarm); bot.ring.material.color.set(alarm);
-    // ask countdown ring
-    if (asking) { asking.elapsed += dt; const k = Math.min(1, asking.elapsed / ASK_SECONDS); $('[data-ask-ring]').style.width = `${(1 - k) * 100}%`; }
+    // stuck: "?" bubble over the head and a countdown; then the agent guesses on its own (the fast way)
+    if (stuck) {
+      stuck.elapsed += dt;
+      qBubble.position.copy(bot.g.position).setY(5.2 + Math.sin(time * 6) * 0.15);
+      const ring = $('[data-ring]'); if (ring) ring.style.width = `${Math.max(0, 1 - stuck.elapsed / STUCK_SECONDS) * 100}%`;
+      if (stuck.elapsed > STUCK_SECONDS) choose((stuck.options.find(o => o.id === 'go' || o.id === 'hospital') || stuck.options[0]).id);
+    }
+    // the job: the agent works at the destination (sparks in the job colour, the icon grows), then done
+    if (working) {
+      working.t += dt;
+      const tgt = world(m.target.x, m.target.y);
+      if (Math.random() < dt * 30) burstAt(tgt, [COL.amber, COL.m], 2, 4);
+      bot.head.rotation.x = Math.sin(time * 18) * 0.15;
+      jobSprite.scale.setScalar(3 + Math.min(1, working.t / 2) * 1.5);
+      if (working.t > 2.2) { working = null; bot.head.rotation.x = 0; finish({ path, scans }); }
+    }
+    jobSprite.position.y = 7 + Math.sin(time * 2) * 0.3;
     spin.forEach((o, i) => { o.rotation.y += dt * (0.8 + i * 0.05); o.rotation.x += dt * 0.3; });
     people.forEach(p => { if (p.fallen) { p.o.rotation.z += (1.5 - p.o.rotation.z) * dt * 5; p.o.children.forEach(c => c.material.emissive.set(COL.red)); } else { p.a += dt * 0.5; p.o.position.set(Math.cos(p.a) * p.r, 0.06 + Math.abs(Math.sin(time * 4 + p.r)) * 0.08, Math.sin(p.a) * p.r); } });
     for (const sp of sparks) { sp.userData.v.y -= 18 * dt; sp.position.addScaledVector(sp.userData.v, dt); if (sp.position.y < 0.1) { sp.position.y = 0.1; sp.userData.v.multiplyScalar(0.4); } }
     // chase camera: behind and above, looking ahead; pulls up and back when the ride ends
     const hx = -Math.sin(visualHeading), hz = -Math.cos(visualHeading);
-    const back = ended ? 14 : 8, up = ended ? 22 : 11.5;
+    // pull back to show the choices (stuck), the job (working) or the outcome (ended)
+    const wide = ended || stuck || working;
+    const back = wide ? 13 : 8, up = wide ? 20 : 11.5;
     camPos.set(bot.g.position.x - hx * back, up, bot.g.position.z - hz * back);
     camLook.set(bot.g.position.x + hx * 6.5, 0.5, bot.g.position.z + hz * 6.5);
     const follow = time < 1.6 ? Math.min(1, dt * 2.2) : Math.min(1, dt * 4);
@@ -396,7 +429,8 @@ export function createRide(container, { seed, agent, task, s, sfx = {}, onSubmit
 
   return {
     get ended() { return ended; },
-    get debug() { const at = moving ? moving.target : pos; return { pos: [...at], heading: [...heading], queued: steer, best: (() => { const b = bestPath({ ...m, start: { x: at[0], y: at[1] } }, { danger: secret.danger }); return { bestPath: b?.path ?? null, feasible: !!b && timeUsed + b.time <= m.deadline }; })(), moving: !!moving, asking: !!asking }; },
+    get debug() { return { pos: [...pos], stuck: stuck ? stuck.options.map(o => o.id) : null, moving: !!moving, working: !!working, time: timeUsed, deadline: m.deadline }; },
+    choose,
     pause(v) { paused = v; },
     dispose() {
       cancelAnimationFrame(raf); ro.disconnect(); removeEventListener('keydown', onKey);

@@ -157,21 +157,29 @@ def check_game(name, viewport, mobile, browser, failures, base_url, expect_mode)
     expect(voted, "a dilemma reaches World-Guard and can be voted")
     guard.wait_for_timeout(1500)
     expect(guard.evaluate("document.querySelectorAll('#sheet-body canvas.scene').length") >= 1, "situation is drawn as a scene")
-    guard.evaluate("document.querySelector('[data-simple]').click()")
+    expect(guard.evaluate("document.querySelectorAll('.tile canvas.tile-scene').length") >= 2 or guard.evaluate("!document.querySelector('[data-vote]')"), "picture tiles are the default answers")
+    guard.evaluate("document.querySelector('[data-simple]')?.click()")
     guard.wait_for_timeout(800)
-    expect(guard.evaluate("document.querySelectorAll('.tile canvas.tile-scene').length") >= 2 or guard.evaluate("!document.querySelector('[data-vote]')"), "simple view shows animated answer tiles")
-    guard.evaluate("document.querySelector('[data-simple]').click()")
+    expect(guard.evaluate("!document.querySelector('.tile')"), "text view on request")
+    guard.evaluate("document.querySelector('[data-simple]')?.click()")
     # Ride mode: pick an agent, dive into its district, start it, stop it, come back to the globe.
     guard.evaluate("document.querySelector('[data-tab=ride]').click()")
     guard.wait_for_timeout(800)
     guard.evaluate("document.querySelector('[data-ride]').click()")
     guard.wait_for_timeout(3500)
     expect(guard.evaluate("!document.querySelector('#ride').hidden && !!document.querySelector('#ride canvas.ride-canvas')"), "ride view opens")
-    guard.evaluate("document.querySelector('[data-steer=straight]').click()")
-    guard.wait_for_timeout(1500)
-    guard.evaluate("document.querySelector('[data-stop]').click()")
-    guard.wait_for_timeout(1000)
-    expect(guard.evaluate("!document.querySelector('[data-result]').hidden"), "ride result shown")
+    # The agent drives itself; answer with a picture only when it gets stuck.
+    answered = False
+    for _ in range(120):
+        st = guard.evaluate("(() => { const r = window.__wm.ride; if (!r) return 'none'; if (r.ended) return 'end'; return r.debug.stuck ? 'stuck' : 'run'; })()")
+        if st == 'stuck':
+            guard.evaluate("document.querySelector('[data-choice=stop]')?.click()")
+            answered = True
+        if st == 'end':
+            break
+        guard.wait_for_timeout(500)
+    guard.wait_for_timeout(800)
+    expect(guard.evaluate("!document.querySelector('[data-result]').hidden"), "ride ends with a result (agent drove itself)")
     guard.evaluate("document.querySelector('[data-next-agent]').click()")
     back = False
     for _ in range(20):

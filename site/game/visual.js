@@ -13,7 +13,7 @@ const store = {
   get: k => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
 };
-export const isSimple = () => store.get('wm-simple') === '1';
+export const isSimple = () => store.get('wm-simple') !== '0'; // pictures first; text view on request
 export const setSimple = v => store.set('wm-simple', v ? '1' : '0');
 
 // Dilemmas seen recently (they disappear from the world when resolved; replays still need them).
