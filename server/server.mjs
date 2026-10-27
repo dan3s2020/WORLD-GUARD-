@@ -67,7 +67,7 @@ const MIME = {
   '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.ico': 'image/x-icon',
   '.md': 'text/markdown; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.woff2': 'font/woff2'
 };
-const PUBLIC = ['index.html', 'play', 'site', 'engine', 'vendor', 'data', 'docs', 'legacy', 'favicon.svg', 'manifest.webmanifest', 'LICENSE'];
+const PUBLIC = ['index.html', 'play', 'arena', 'site', 'engine', 'vendor', 'data', 'docs', 'legacy', 'favicon.svg', 'manifest.webmanifest', 'LICENSE'];
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'no-referrer',
@@ -77,7 +77,7 @@ const SECURITY_HEADERS = {
 function serveStatic(req, res) {
   const url = new URL(req.url, 'http://x');
   let rel = decodeURIComponent(url.pathname).replace(/^\/+/, '') || 'index.html';
-  if (rel.endsWith('/') || rel === 'play') rel = rel.replace(/\/?$/, '/') + 'index.html';
+  if (rel.endsWith('/') || rel === 'play' || rel === 'arena') rel = rel.replace(/\/?$/, '/') + 'index.html';
   const top = rel.split('/')[0];
   const file = path.resolve(ROOT, rel);
   if (!PUBLIC.includes(top) || !file.startsWith(ROOT + path.sep)) {
