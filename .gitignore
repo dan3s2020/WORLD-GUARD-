@@ -7,5 +7,5 @@ __pycache__/
 *.egg-info/
 server/data/
 data/*.jsonl
-checkpoints/
+/checkpoints/
 test-results/
