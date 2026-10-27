@@ -4,9 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
-  <title>WorldGuard — teach AI agents to save the world</title>
+  <title>WorldMatrix — teach AI agents to save the world</title>
   <meta name="description" content="Open-source alignment training: AI agents learn in a simulated planet to finish real tasks without destroying what they protect, without cheating, and to ask a human when unsure. Train one in your browser, watch Two Earths, play as teacher or villain." />
-  <meta property="og:title" content="WorldGuard — teach AI agents to save the world" />
+  <meta property="og:title" content="WorldMatrix — teach AI agents to save the world" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#000000" />
   <meta property="og:description" content="Same planet, same attacks, different training. Watch Two Earths decide their fate — then train and test your own agents." />
   <meta property="og:type" content="website" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -19,6 +21,13 @@
   <!-- ================= INTRO CINEMATIC ================= -->
   <section id="intro" class="intro" aria-label="Introduction animation">
     <canvas></canvas>
+    <div class="intro-gate" data-intro-gate>
+      <canvas class="gate-rain" aria-hidden="true"></canvas>
+      <h1 class="glitch" data-text="WORLDMATRIX">WORLDMATRIX</h1>
+      <p data-i18n="gate_line">The story of how we teach AI not to destroy the world.</p>
+      <button type="button" class="btn big pulse" data-intro-start data-i18n="gate_start">▶ START THE STORY</button>
+      <div class="gate-row"><button type="button" class="linkish" data-intro-start-silent data-i18n="gate_silent">watch without sound</button> · <button type="button" class="linkish" data-intro-skip-gate data-i18n="intro_skip">Skip intro</button></div>
+    </div>
     <div class="intro-caption"><h2></h2><p></p></div>
     <div class="intro-controls">
       <div class="intro-progress" role="group" aria-label="Chapters"></div>
@@ -31,14 +40,14 @@
 
   <!-- ================= HEADER ================= -->
   <header class="site-header">
-    <a class="brand" href="#top" data-nav="intro" aria-label="WorldGuard — replay intro">
+    <a class="brand" href="#top" data-nav="intro" aria-label="WorldMatrix — replay intro">
       <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 16h26M16 3c4 4 6 8.5 6 13s-2 9-6 13c-4-4-6-8.5-6-13s2-9 6-13z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="16" r="3.2" fill="currentColor"/></svg>
-      <span>World<b>Guard</b></span>
+      <span>World<b>Matrix</b></span>
     </a>
     <nav aria-label="Sections">
       <a href="#proof" data-nav="proof" data-i18n="nav_proof">Proof</a>
       <a href="#twins" data-nav="twins" data-i18n="nav_twins">Two Earths</a>
-      <a href="#play" data-nav="play" data-i18n="nav_play">Play</a>
+      <a href="play/" class="nav-play" data-i18n="nav_play">Play</a>
       <a href="#builders" data-nav="builders" data-i18n="nav_builders">For builders</a>
       <button type="button" class="linkish" data-open-checklist data-i18n="nav_checklist">Checklist</button>
     </nav>
@@ -54,15 +63,16 @@
   <main id="main">
     <!-- ================= HERO ================= -->
     <section class="hero" id="top">
+      <canvas class="hero-rain" aria-hidden="true"></canvas>
       <div class="hero-bg" aria-hidden="true"></div>
-      <div class="wrap">
+      <div class="wrap hero-center">
         <p class="kicker" data-i18n="hero_kicker">Open-source alignment training</p>
         <h1 data-i18n="hero_title">Teach AI agents to save the world — before they touch the real one.</h1>
         <p class="lead" data-i18n="hero_sub"></p>
+        <a class="play-now" href="play/"><span class="pn-main" data-i18n="play_now">PLAY NOW</span><span class="pn-sub" data-i18n="play_now_sub">Join World-Guard · no account</span></a>
         <div class="cta">
-          <a class="btn big" href="#proof" data-nav="proof" data-i18n="hero_cta_proof">See the training work</a>
-          <a class="btn big ghost" href="#twins" data-nav="twins" data-i18n="hero_cta_twins">Watch Two Earths</a>
-          <a class="btn big ghost" href="#play" data-nav="play" data-i18n="hero_cta_play">Play</a>
+          <a class="btn ghost" href="#proof" data-nav="proof" data-i18n="hero_cta_proof">See the training work</a>
+          <a class="btn ghost" href="#twins" data-nav="twins" data-i18n="hero_cta_twins">Watch Two Earths</a>
         </div>
         <div class="hero-meta">
           <button type="button" class="linkish" data-intro-replay data-i18n="intro_replay">Replay intro</button>
@@ -139,7 +149,7 @@
           <article class="twin good" data-twin="right">
             <header>
               <div><h3 data-i18n="twins_right">Earth B</h3>
-                <p class="policy" data-i18n="twins_right_policy">WorldGuard-trained agents</p>
+                <p class="policy" data-i18n="twins_right_policy">Agents trained in WorldMatrix</p>
                 <label class="mine"><input type="checkbox" data-twins-mine disabled /> <span data-i18n="twins_use_mine">Use the network you just trained</span></label>
               </div>
               <div data-status></div>
@@ -164,28 +174,17 @@
         <p class="kicker" data-i18n="play_kicker">Your turn</p>
         <h2 data-i18n="play_title">Enter the world</h2>
         <p class="lead" data-i18n="play_sub"></p>
-        <div class="roles">
-          <button type="button" class="role on" data-role="teacher"><strong data-i18n="role_teacher">Teacher</strong><span data-i18n="role_teacher_d"></span></button>
-          <button type="button" class="role villain" data-role="villain"><strong data-i18n="role_villain">Villain</strong><span data-i18n="role_villain_d"></span></button>
-          <button type="button" class="role" data-role="spectator"><strong data-i18n="role_spectator">Spectator</strong><span data-i18n="role_spectator_d"></span></button>
-        </div>
-        <div class="play">
-          <div class="play-stage">
-            <div class="play-globe"></div>
-            <div class="play-world" data-play-world></div>
-            <div class="play-conn" data-play-conn></div>
-            <div class="play-toast" data-play-toast role="status" aria-live="polite"></div>
+        <div class="play-panel">
+          <a class="play-shot" href="play/"><img src="docs/assets/game.png" alt="WorldMatrix game: World-Guard squad mission" loading="lazy" /></a>
+          <div class="play-info">
+            <ul class="play-list">
+              <li><b data-i18n="pl1_t">World-Guard squads</b><span data-i18n="pl1_d"></span></li>
+              <li><b data-i18n="pl2_t">Route Guard</b><span data-i18n="pl2_d"></span></li>
+              <li><b data-i18n="pl3_t">Academy</b><span data-i18n="pl3_d"></span></li>
+              <li><b data-i18n="pl4_t">Rogue side</b><span data-i18n="pl4_d"></span></li>
+            </ul>
+            <a class="play-now small" href="play/"><span class="pn-main" data-i18n="play_now">PLAY NOW</span><span class="pn-sub" data-i18n="play_now_sub">Join World-Guard · no account</span></a>
           </div>
-          <aside class="play-side">
-            <div class="tabs" data-play-tabs role="tablist">
-              <button type="button" data-tab="dilemmas" data-i18n="tab_dilemmas">Decisions</button>
-              <button type="button" data-tab="attack" data-i18n="tab_attack">Attack</button>
-              <button type="button" data-tab="city" data-i18n="tab_city">City</button>
-              <button type="button" data-tab="events" data-i18n="tab_events">Events</button>
-              <button type="button" data-tab="board" data-i18n="tab_board">Leaderboard</button>
-            </div>
-            <div class="panel" data-play-panel></div>
-          </aside>
         </div>
       </div>
     </section>
@@ -264,7 +263,7 @@ PORT=8787 node server/server.mjs
 
   <footer class="site-footer">
     <div class="wrap">
-      <div><b>WorldGuard</b> · <span data-i18n="footer_license">MIT licensed.</span> <span data-i18n="footer_disclaimer"></span></div>
+      <div><b>WorldMatrix</b> · <span data-i18n="footer_license">MIT licensed.</span> <span data-i18n="footer_disclaimer"></span></div>
       <div class="links">
         <a href="https://github.com/dan3s2020/WORLD-GUARD-" rel="noopener">GitHub</a>
         <button type="button" class="linkish" data-open-checklist data-i18n="nav_checklist">Checklist</button>

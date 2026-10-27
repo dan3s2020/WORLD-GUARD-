@@ -13,13 +13,15 @@ jobs:
         with: { python-version: '3.12' }
       - name: Engine + server tests
         run: npm test
+      - name: Supabase migration on PostgreSQL (grants, RLS, rate limit)
+        run: bash tests/supabase-migration.sh
       - name: Held-out evaluation (shipped checkpoint vs baselines)
         run: node cli/worldguard.mjs eval --episodes 1000
       - name: Python package tests
         run: npm run test:py
       - name: Syntax-check TRL examples
         run: python -m py_compile examples/*.py
-      - name: Browser smoke test (desktop + mobile)
+      - name: Browser smoke test (site + game on both hosts, desktop + mobile)
         run: |
           pip install playwright
           python -m playwright install --with-deps chromium

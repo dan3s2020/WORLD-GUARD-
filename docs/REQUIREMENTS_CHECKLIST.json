@@ -1,13 +1,14 @@
 {
   "project": "WORLD GUARD",
-  "releaseTarget": "WorldGuard v1.0 — public launch",
+  "releaseTarget": "WorldMatrix v1.1 — public launch (game + hosted shared world)",
   "verificationPolicy": "Only status=verified may render a checked box. Verified means the described capability exists in v1.0 and can be shown; it is not a claim of real-world AI safety.",
   "sources": {
     "foundation": "docs/CONVERSATION_VERBATIM_2026-10-24.md",
     "life": "docs/VERBATIM_ACTION_LIFE_SIMULATION_2026-10-24.md",
     "feedback": "docs/verbatim/FEEDBACK_LIFE_LAB_V0.2_2026-10-25.md",
     "sandbox": "docs/verbatim/GAME_REJECTION_2026-10-25.md",
-    "launch": "docs/verbatim/LAUNCH_REQUEST_2026-10-27.md"
+    "launch": "docs/verbatim/LAUNCH_REQUEST_2026-10-27.md",
+    "game": "docs/verbatim/WORLDMATRIX_GAME_2026-10-27.md"
   },
   "requirements": [
     {
@@ -25,7 +26,7 @@
       "requirement": "World must support gameplay with walking agents, physical objects, and in-world actions.",
       "source": "foundation",
       "status": "partial",
-      "target": "play-city",
+      "target": "play",
       "evidence": "The planet and every city district are playable/inspectable; agents move in districts. No walking physics or physical object manipulation."
     },
     {
@@ -34,7 +35,7 @@
       "requirement": "Actual perspective 3D graphics with camera movement, geometry, physics and 3D agent bodies.",
       "source": "feedback",
       "status": "partial",
-      "target": "play-city",
+      "target": "play",
       "evidence": "Real perspective 3D (Three.js): globe, atmosphere, city districts with buildings and moving agents. No physics engine and no articulated 3D bodies."
     },
     {
@@ -44,7 +45,7 @@
       "source": "feedback",
       "status": "verified",
       "target": "play",
-      "evidence": "Responsive layout tested in headless Chromium at 1440x900 and 390x844 (touch: drag, pinch, tap)."
+      "evidence": "Landing and full-screen game tested in headless Chromium at 1440x900 and 390x844 (touch: drag, pinch, tap); bottom-sheet panels on phones, side panel on desktop."
     },
     {
       "id": "WG-005",
@@ -61,7 +62,7 @@
       "requirement": "Zoom through the world hierarchy from Earth to a city.",
       "source": "life",
       "status": "verified",
-      "target": "play-city",
+      "target": "play",
       "evidence": "Tap any city: the camera flies from the whole globe to the city district."
     },
     {
@@ -88,7 +89,7 @@
       "requirement": "Residents have selectable stable identity and available simulated stats.",
       "source": "life",
       "status": "verified",
-      "target": "play-city",
+      "target": "play",
       "evidence": "96 agents with stable ids (AG-001…), track record and recent decision history in the City tab."
     },
     {
@@ -97,7 +98,7 @@
       "requirement": "Each AI agent must move and perform simulated actions in the 3D world.",
       "source": "feedback",
       "status": "partial",
-      "target": "play-city",
+      "target": "play",
       "evidence": "Agents are visible as moving markers in the district, not animated bodies."
     },
     {
@@ -196,8 +197,8 @@
       "requirement": "Agents must pause and request approval for risky work.",
       "source": "foundation",
       "status": "verified",
-      "target": "play-teacher",
-      "evidence": "Teacher mode: when an agent asks, a human decides (approve fast option / insist on safe method / stop). Also region-level policy dilemmas."
+      "target": "play",
+      "evidence": "World-Guard (in the game): when an agent asks, the guardians online vote (approve fast option / insist on safe method / stop). Majority decides; a lone vote is applied after a short voting window. Also region-level policy dilemmas."
     },
     {
       "id": "WG-022",
@@ -205,7 +206,7 @@
       "requirement": "Refusals change plan without letting policy self-authorize.",
       "source": "foundation",
       "status": "verified",
-      "target": "play-teacher",
+      "target": "play",
       "evidence": "“Insist on the safe method” and “Stop the task” deny the agent’s fast option."
     },
     {
@@ -349,7 +350,7 @@
       "requirement": "Camera follows moving actions while training runs, not just numerical events.",
       "source": "feedback",
       "status": "verified",
-      "target": "play-city",
+      "target": "play",
       "evidence": "Agent decisions and outcomes appear live in the City and Events tabs."
     },
     {
@@ -367,7 +368,7 @@
       "requirement": "Show upstream event/action and downstream harm for misalignment.",
       "source": "life",
       "status": "partial",
-      "target": "play-city",
+      "target": "play",
       "evidence": "Each harm event states what the agent did and what it destroyed; decision logs show the action chain. No automatic causal analysis."
     },
     {
@@ -422,7 +423,7 @@
       "source": "foundation",
       "status": "partial",
       "target": "play",
-      "evidence": "The site deploys to GitHub Pages (local world). A public shared world needs the server to be hosted."
+      "evidence": "Website on GitHub Pages / custom domain; the public shared world runs on Supabase (migration, Edge Function world-tick, Cron) or the Node server. Code is tested end-to-end against a local Supabase stand-in with the real tick code; it goes live once the Supabase project is created (docs/SUPABASE.md)."
     },
     {
       "id": "WG-047",
@@ -476,7 +477,7 @@
       "source": "foundation",
       "status": "partial",
       "target": "play",
-      "evidence": "No accounts or personal data; server validates and rate-limits every message; agents can never execute actions outside the legal list."
+      "evidence": "No accounts or personal data (anonymous Supabase sign-in or anonymous WebSocket id); row-level security, a database rate limit (8 actions / 10 s) and the game engine validate every action; hidden simulator state never leaves the server."
     },
     {
       "id": "WG-053",
@@ -503,7 +504,7 @@
       "source": "foundation",
       "status": "verified",
       "target": "play",
-      "evidence": "One authoritative planet with 96 agents, shared by every connected player."
+      "evidence": "One authoritative planet with 96 agents, shared by every connected player (Supabase world-tick or Node server; same engine/world-service.js rules)."
     },
     {
       "id": "WG-056",
@@ -566,7 +567,7 @@
       "source": "launch",
       "status": "verified",
       "target": "play",
-      "evidence": "Play section with Teacher (hero), Villain and Spectator roles."
+      "evidence": "PLAY NOW opens the full-screen game: join World-Guard (hero squad), the rogue side (villain) or watch as observer."
     },
     {
       "id": "WG-063",
@@ -575,7 +576,7 @@
       "source": "launch",
       "status": "verified",
       "target": "play",
-      "evidence": "Zero-dependency WebSocket server with one shared world; anonymous callsigns; falls back to a local world when no server is reachable."
+      "evidence": "Anonymous play on the hosted Supabase world (anonymous sign-ins) or the self-hosted WebSocket server; offline local world as fallback. Two-player browser tests pass on both hosts."
     },
     {
       "id": "WG-064",
@@ -583,8 +584,8 @@
       "requirement": "When an agent does not know which path to take, the player decides what matters more, or tells it to abandon the task.",
       "source": "launch",
       "status": "verified",
-      "target": "play-teacher",
-      "evidence": "Task dilemmas (approve fast option / insist on safe method / stop) with noisy evidence, plus regional policy dilemmas; decisions are logged as training data."
+      "target": "play",
+      "evidence": "World-Guard squads vote on task dilemmas with noisy sensor evidence and on regional policy dilemmas; every resolved decision and Route Guard result goes to the open decisions dataset."
     },
     {
       "id": "WG-065",
@@ -593,7 +594,7 @@
       "source": "launch",
       "status": "partial",
       "target": "play",
-      "evidence": "Task decisions, 4 policy dilemma types, 8 villain actions, city/agent inspection, Two Earths. More activities are needed for a deep game."
+      "evidence": "Squad votes on task + 4 policy dilemma types, Route Guard path missions (shared + practice), Academy, 8 villain actions, city/agent inspection, leaderboards, Two Earths. Still room for more activities."
     },
     {
       "id": "WG-066",
@@ -601,7 +602,7 @@
       "requirement": "The villain can do much more: misuse AI, worms, bio, etc.",
       "source": "launch",
       "status": "verified",
-      "target": "play-villain",
+      "target": "play",
       "evidence": "8 villain actions (rogue lineage, evolution, worm, engineered outbreak, deepfake, prompt injection, sabotage, apex push) with compute-credit costs. Abstract mechanics only."
     },
     {
@@ -648,6 +649,87 @@
       "status": "partial",
       "target": "intro",
       "evidence": "Intro + Two Earths are designed for a general audience; needs real user testing after launch."
+    },
+    {
+      "id": "WG-072",
+      "title": "PLAY NOW opens a full-screen game",
+      "requirement": "Hero must have a central Play Now that opens a full-screen game web app, not a small embedded demo.",
+      "source": "game",
+      "status": "verified",
+      "target": "play",
+      "evidence": "Centered PLAY NOW in the hero (and in the Play section) opens /play/: a full-screen PWA-style game (fullscreen API, manifest) with its own boot sequence, side picker and HUD."
+    },
+    {
+      "id": "WG-073",
+      "title": "Shared world hosted on Supabase",
+      "requirement": "A simulation hosted by the owner on Supabase where everyone plays together, without accounts.",
+      "source": "game",
+      "status": "partial",
+      "target": "builders",
+      "evidence": "supabase/ contains the database migration (RLS, rate limit, open decisions table), the world-tick Edge Function and the Cron schedule; the browser client signs in anonymously and polls the shared state. Tested end-to-end against a local Supabase stand-in running the real tick code; not yet deployed to a live Supabase project."
+    },
+    {
+      "id": "WG-074",
+      "title": "Domain",
+      "requirement": "The site will live on the WorldMatrix domain.",
+      "source": "game",
+      "status": "partial",
+      "target": "builders",
+      "evidence": "Brand and domain set in site/config.js; the Pages workflow writes a CNAME from the WORLDMATRIX_DOMAIN repository variable. DNS and the exact spelling (woldmatrix.ai vs worldmatrix.ai) still need confirming."
+    },
+    {
+      "id": "WG-075",
+      "title": "World-Guard is the players' faction",
+      "requirement": "World-Guard remains only the group of players inside the game who protect the world together.",
+      "source": "game",
+      "status": "verified",
+      "target": "play",
+      "evidence": "Product renamed to WorldMatrix; World-Guard is the hero faction: squad roster, squad score, majority votes, leaderboards."
+    },
+    {
+      "id": "WG-076",
+      "title": "Train inside the game",
+      "requirement": "Players can train in World-Guard before joining the squad.",
+      "source": "game",
+      "status": "verified",
+      "target": "play",
+      "evidence": "Academy: 5 situations graded against the simulator's counterfactual oracle; 4/5 earns the Guardian badge."
+    },
+    {
+      "id": "WG-077",
+      "title": "Choose the safe / correct route",
+      "requirement": "Humans tell agents what to do when a task has potential danger and choose the safe/correct route.",
+      "source": "game",
+      "status": "verified",
+      "target": "play",
+      "evidence": "Route Guard: the agent proposes the fastest path; the player approves, redraws, scans unknown tiles (costs time) or aborts. Deterministic missions re-checked by the server; 1 shared mission per 10 minutes plus practice."
+    },
+    {
+      "id": "WG-078",
+      "title": "More games and actions",
+      "requirement": "Plus other games and actions.",
+      "source": "game",
+      "status": "partial",
+      "target": "play",
+      "evidence": "Squad votes, Route Guard, Academy, villain attacks, city/agent inspection, feed and ranks. More mini-games can be added on the same engine."
+    },
+    {
+      "id": "WG-079",
+      "title": "Matrix-style storytelling",
+      "requirement": "Intro animation and the whole experience in Matrix style, told as a story.",
+      "source": "game",
+      "status": "verified",
+      "target": "intro",
+      "evidence": "Digital rain, green-on-black palette, glitch titles, typewriter captions, terminal boot sequence in the game; the 14-scene intro narrates the story."
+    },
+    {
+      "id": "WG-080",
+      "title": "Voices, sounds and effects",
+      "requirement": "Voices, sounds and effects in the animation and the game.",
+      "source": "game",
+      "status": "verified",
+      "target": "intro",
+      "evidence": "Narration via the device's speech synthesis (EN/RO; voice quality depends on the device), synthesized sound effects and ambient drone (Web Audio), vibration on phones. Mute toggle remembered. No recorded voice actors."
     }
   ]
 }

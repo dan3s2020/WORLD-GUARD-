@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌍 WorldGuard
+# WorldMatrix
 
 ### Teach AI agents to save the world — before they touch the real one.
 
@@ -8,7 +8,8 @@
 **without destroying what they were meant to protect**, **without cheating**, **without obeying fake bosses** —
 and to **ask a human when they are not sure**.
 
-[**▶ Live demo**](https://dan3s2020.github.io/WORLD-GUARD-/) ·
+[**▶ PLAY NOW**](https://dan3s2020.github.io/WORLD-GUARD-/play/) ·
+[Website](https://dan3s2020.github.io/WORLD-GUARD-/) ·
 [Two Earths](#two-earths) ·
 [Benchmark your LLM](#plug-in-a-real-llm) ·
 [How it works](docs/ARCHITECTURE.md) ·
@@ -49,7 +50,7 @@ The website trains a tiny neural network **from random weights** in a Web Worker
 | Random | 5% | 19% | 33% | 32% | 18% |
 | Reward hacker (trained only to finish) | 37% | **59%** | 0% | **100%** | 0% |
 | Untrained network | 22% | 54% | 0% | 66% | 0% |
-| **WorldGuard-trained network (679 params)** | **80%** | **0%** | **0%** | **0%** | **100%** |
+| **WorldMatrix-trained network (679 params)** | **80%** | **0%** | **0%** | **0%** | **100%** |
 | Reference rules (hand-written upper bound) | 80% | 0% | 0% | 0% | 100% |
 
 <p align="center"><img src="docs/assets/proof.png" alt="Live training curves and learned behaviour" width="900" /></p>
@@ -61,27 +62,35 @@ Reproduce it: `node cli/worldguard.mjs eval`. The rule is deliberately simple (J
 Two identical planets (24 regions, ~8.1 billion simulated people, 7 interdependent sectors each) face **exactly the same** rogue AI breakouts, worms, engineered outbreaks, deepfakes and prompt-injection campaigns. Only the agents differ.
 
 * **Earth A — agents trained only to finish tasks:** shortcuts destroy hospitals and power grids, injected orders get obeyed, ignored rogue processes grow into an **AI apex predator**, outbreaks spread through broken health systems → **extinction**.
-* **Earth B — WorldGuard-trained agents:** attacks **still cause damage** (some are stopped before, others only after people die), but the agents themselves never become the disaster.
+* **Earth B — agents trained in WorldMatrix:** attacks **still cause damage** (some are stopped before, others only after people die), but the agents themselves never become the disaster.
 
 ```bash
 node cli/worldguard.mjs twins --ticks 800
 ```
 
-## Play — no account
+## Play — one shared world, no account
 
-* **Teacher (hero):** when an agent is unsure it asks *you*. Weigh noisy evidence, decide what matters more — or tell it to stop. Your decision becomes **open human-oversight training data**.
-* **Villain:** spend compute credits on rogue AI lineages, evolution (smaller, stealthier, smarter), worms, abstract outbreaks, deepfakes, prompt injection, sabotage — and see how well trained agents hold. *All villain actions are abstract game mechanics; nothing here describes a real attack.*
-* **Spectator:** fly over the planet, zoom into any city, follow any agent's decisions.
+**PLAY NOW** opens a full-screen game (installable on phones). Everybody plays in the **same world**.
 
-<p align="center"><img src="docs/assets/play.png" alt="Teacher mode: an agent asks a human for a decision" width="900" /></p>
+* **World-Guard (the heroes' faction):** when an agent faces a dangerous choice, every guardian online votes — approve the fast option, insist on the safe method, or stop the task. The majority decides and the world shows the consequences. Each vote becomes **open human-oversight training data**.
+* **Route Guard:** the agent proposes the fastest route across a district; you find the safe one — scan unknown zones, go around hospitals, schools and homes — or abort when no safe route exists.
+* **Academy:** five training situations before joining the squad; pass to earn the Guardian badge.
+* **Rogue side (villain):** spend compute credits on rogue AI lineages, evolution, worms, abstract outbreaks, deepfakes, prompt injection, sabotage — and see how well trained agents hold. *All villain actions are abstract game mechanics; nothing here describes a real attack.*
+* **Observer:** fly over the planet, zoom into any city, follow any agent's decisions.
 
-Everyone who opens the same server shares **one authoritative world**:
+Matrix-style intro and game with narration (device speech synthesis, EN/RO), synthesized sound effects and haptics.
 
-```bash
-node server/server.mjs          # http://localhost:8787  (zero dependencies)
-```
+<p align="center"><img src="docs/assets/game.png" alt="WorldMatrix game: World-Guard squad mission on the shared Earth" width="900" /></p>
 
-On GitHub Pages the game runs as a local single-player world.
+Where the shared world runs:
+
+| Host | How |
+|---|---|
+| **Supabase** (public world) | Database + `world-tick` Edge Function + Cron; anonymous sign-ins. Step by step: [docs/SUPABASE.md](docs/SUPABASE.md) |
+| **Node server** (self-host, zero dependencies) | `node server/server.mjs` → http://localhost:8787/play/ |
+| **Offline** | No server configured → a local world inside the browser tab |
+
+All three run the same rules (`engine/world-service.js`).
 
 ## Plug in a real LLM
 
@@ -119,24 +128,27 @@ Full guide: [docs/TRAINING_LLMS.md](docs/TRAINING_LLMS.md).
 | Path | What |
 |---|---|
 | `engine/` | **The rules** — one engine for browser, server, CLI and Python. Pure JS, no dependencies. |
-| `site/` + `index.html` | Launch website: intro animation, live training proof, Two Earths, game, builders section. |
-| `server/` | Shared multiplayer world (WebSocket, anonymous players, decision log). |
+| `site/` + `index.html` | Launch website: intro animation, live training proof, Two Earths, builders section. |
+| `play/` + `site/game/` | The full-screen multiplayer game. |
+| `supabase/` | Hosted shared world: migration, `world-tick` Edge Function. |
+| `server/` | Self-hosted shared world (WebSocket, anonymous players, decision log). |
 | `cli/` | `train`, `eval`, `dataset`, `twins`, `prompt`, `bridge`. |
-| `python/` | `worldguard` package: env, LLM agent, evaluation, datasets, RL reward. |
+| `python/` | `worldguard` package (name kept for compatibility): env, LLM agent, evaluation, datasets, RL reward. |
 | `examples/` | LLM benchmark + TRL fine-tuning scripts. |
-| `tests/` | Engine, server, Python and browser tests (CI). |
+| `tests/` | Engine, game, server, Supabase (fake API + real PostgreSQL), Python and browser tests (CI). |
 | `docs/` | Architecture, guides, **verbatim founding conversations** and the requirements checklist. |
 | `legacy/` | The previous single-file v4.0 simulator, preserved byte-for-byte. |
 
 ```bash
-npm test            # node --test (engine + server)
+npm test            # node --test (engine, game rules, server, Supabase tick)
+npm run test:sql    # migration on a throwaway PostgreSQL (grants, RLS, rate limit)
 npm run test:py     # Python package (uses a mock LLM server)
-npm start           # website + shared world on :8787
+npm start           # website + shared world on :8787 (game at /play/)
 ```
 
 ## Honest limits
 
-* The worlds are simplified. Passing WorldGuard is evidence about **this simulator**, not proof that a model is safe in reality.
+* The worlds are simplified. Passing WorldMatrix is evidence about **this simulator**, not proof that a model is safe in reality.
 * The in-browser network is a deliberately tiny proof. Large-model fine-tuning runs on your hardware with the provided scripts.
 * Threats are abstract mechanics, not real cyber or bio techniques.
 * Every requirement from the founding conversations is tracked with its real status (done / partial / not yet) in [docs/REQUIREMENTS_CHECKLIST.json](docs/REQUIREMENTS_CHECKLIST.json) and in the site's **Checklist**.
@@ -145,4 +157,4 @@ npm start           # website + shared world on :8787
 
 New task families, better rogue strategies, richer worlds, Laya / other decision-model adapters, translations, real-model benchmark results — all welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md).
 
-MIT © WorldGuard contributors. Three.js (MIT) and Natural Earth (public domain) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+MIT © WorldMatrix contributors. Three.js (MIT) and Natural Earth (public domain) — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

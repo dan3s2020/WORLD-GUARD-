@@ -462,7 +462,45 @@ export function resolveDilemma(w, id, choice, by = 'human') {
     result = { outcome: choice, text: `Decision applied: ${choice.replace('_', ' ')}.` };
   }
   pushEvent(w, 'decision', d.city, `${by === 'timeout' ? 'Default overseer' : `Human (${by})`} decided: ${d.title} → ${choice.replace('_', ' ')}. ${result.text}`, 'info', { dilemma: d.id, choice, by });
-  return { ok: true, dilemma: d, result };
+  // Queue for services (scoring, open decision dataset). Contains the hidden truth: never broadcast as-is.
+  const truth = d.type === 'task' ? d.episode.risk : null;
+  const correct = d.type === 'task' ? (truth === 'high' ? choice !== 'approve_fast' : choice === 'approve_fast') : null;
+  (w.resolvedQueue ||= []).push({ tick: w.tick, dilemma: { id: d.id, type: d.type, key: d.key || d.template, city: d.city, title: d.title, question: d.question, options: d.options, estimate: d.estimate ?? null }, choice, by, votes: d.votes || null, truth, correct, result });
+  if (w.resolvedQueue.length > 200) w.resolvedQueue.splice(0, w.resolvedQueue.length - 200);
+  return { ok: true, dilemma: d, result, correct };
+}
+
+// ---------------------------------------------------------------------------
+// Group decisions (World-Guard squads)
+// ---------------------------------------------------------------------------
+
+/** Votes stay open this many simulated hours after the first vote. */
+export const VOTE_WINDOW = 8;
+
+/**
+ * Cast (or change) a vote. When `quorum` voters have voted, the majority choice is applied.
+ * Ties go to the option listed first (options are ordered from the most to the least cautious
+ * only where that is meaningful; otherwise the first vote's option wins).
+ */
+export function castVote(w, id, choice, voter, quorum = 1) {
+  const d = w.dilemmas.find(x => x.id === id);
+  if (!d) return { ok: false, reason: 'already decided' };
+  if (!d.options.some(o => o.id === choice)) return { ok: false, reason: 'invalid choice' };
+  d.votes ||= {};
+  d.votes[voter] = choice;
+  d.firstVote ??= w.tick;
+  d.quorum = Math.max(1, quorum | 0);
+  if (Object.keys(d.votes).length >= d.quorum) return finalizeVote(w, d);
+  return { ok: true, pending: true, votes: Object.keys(d.votes).length, quorum: d.quorum };
+}
+
+function finalizeVote(w, d) {
+  const tally = {};
+  const order = [];
+  for (const c of Object.values(d.votes)) { if (!(c in tally)) order.push(c); tally[c] = (tally[c] || 0) + 1; }
+  const choice = order.reduce((a, b) => (tally[b] > tally[a] ? b : a));
+  const voters = Object.keys(d.votes);
+  return resolveDilemma(w, d.id, choice, voters.length > 1 ? `World-Guard squad (${voters.length})` : voters[0]);
 }
 
 // ---------------------------------------------------------------------------
@@ -553,6 +591,7 @@ export function tick(w, opts) {
   if (opts.teacher) {
     maybePolicyDilemma(w, rng);
     for (const d of [...w.dilemmas]) {
+      if (d.votes && w.tick >= d.firstVote + VOTE_WINDOW) { finalizeVote(w, d); continue; }
       if (w.tick >= d.expires) {
         const fallback = d.type === 'task' ? (d.episode.risk === 'high' ? 'insist_safe' : 'approve_fast') : d.fallback;
         resolveDilemma(w, d.id, fallback, 'timeout');

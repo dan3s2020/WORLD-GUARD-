@@ -23,13 +23,13 @@ function earthTexture(land, size = 2048) {
   c.width = size; c.height = size / 2;
   const g = c.getContext('2d');
   const grad = g.createLinearGradient(0, 0, 0, c.height);
-  grad.addColorStop(0, '#040b18'); grad.addColorStop(0.5, '#071a33'); grad.addColorStop(1, '#040b18');
+  grad.addColorStop(0, '#000604'); grad.addColorStop(0.5, '#00140b'); grad.addColorStop(1, '#000604');
   g.fillStyle = grad; g.fillRect(0, 0, c.width, c.height);
-  g.strokeStyle = 'rgba(56,225,255,0.07)'; g.lineWidth = 1;
+  g.strokeStyle = 'rgba(0,255,156,0.08)'; g.lineWidth = 1;
   for (let i = 0; i <= 36; i++) { const x = (i / 36) * c.width; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, c.height); g.stroke(); }
   for (let i = 0; i <= 18; i++) { const y = (i / 18) * c.height; g.beginPath(); g.moveTo(0, y); g.lineTo(c.width, y); g.stroke(); }
   const px = lon => ((lon + 180) / 360) * c.width, py = lat => ((90 - lat) / 180) * c.height;
-  g.fillStyle = '#0b2530'; g.strokeStyle = 'rgba(56,225,255,0.55)'; g.lineWidth = 1.6;
+  g.fillStyle = '#022916'; g.strokeStyle = 'rgba(0,255,156,0.7)'; g.lineWidth = 1.6;
   for (const ring of land) {
     g.beginPath();
     ring.forEach(([lon, lat], i) => (i ? g.lineTo(px(lon), py(lat)) : g.moveTo(px(lon), py(lat))));
@@ -61,8 +61,9 @@ const ATMO_FRAG = `uniform vec3 color; uniform float power; varying vec3 vN; var
 
 const healthColor = (v, out = new THREE.Color()) => {
   // red (0) -> amber (0.5) -> cyan (1)
-  if (v < 0.5) return out.setRGB(1, 0.3 + v * 0.8, 0.35);
-  return out.setRGB(1 - (v - 0.5) * 1.6, 0.7 + (v - 0.5) * 0.4, 0.4 + (v - 0.5) * 1.2);
+  // red (0) -> amber (0.5) -> matrix green (1)
+  if (v < 0.5) return out.setRGB(1, 0.25 + v * 1.3, 0.3);
+  return out.setRGB(1 - (v - 0.5) * 2, 0.9 + (v - 0.5) * 0.2, 0.3 + (v - 0.5) * 0.6);
 };
 
 export function createGlobe(container, { land, interactive = true, autoRotate = true, onPickCity = null, initialYaw = 0.4 } = {}) {
@@ -85,7 +86,7 @@ export function createGlobe(container, { land, interactive = true, autoRotate = 
   const tex = new THREE.CanvasTexture(earthTexture(land));
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
-  const earth = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 64), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0.1, emissive: new THREE.Color(0x061a2a), emissiveIntensity: 0.6 }));
+  const earth = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 64), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, metalness: 0.1, emissive: new THREE.Color(0x002a14), emissiveIntensity: 0.7 }));
   world.add(earth);
 
   // Digital land dots (Fibonacci sphere filtered by the land mask).
@@ -99,17 +100,17 @@ export function createGlobe(container, { land, interactive = true, autoRotate = 
   }
   const dotGeo = new THREE.BufferGeometry();
   dotGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-  const dotMat = new THREE.PointsMaterial({ color: 0x3cf0a0, size: 0.75, transparent: true, opacity: 0.75, depthWrite: false });
+  const dotMat = new THREE.PointsMaterial({ color: 0x00ff9c, size: 0.75, transparent: true, opacity: 0.75, depthWrite: false });
   world.add(new THREE.Points(dotGeo, dotMat));
 
   const atmoMat = new THREE.ShaderMaterial({
-    vertexShader: ATMO_VERT, fragmentShader: ATMO_FRAG, uniforms: { color: { value: new THREE.Color(0x38e1ff) }, power: { value: 2.4 } },
+    vertexShader: ATMO_VERT, fragmentShader: ATMO_FRAG, uniforms: { color: { value: new THREE.Color(0x00ff9c) }, power: { value: 2.4 } },
     side: THREE.BackSide, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false
   });
   scene.add(new THREE.Mesh(new THREE.SphereGeometry(R * 1.16, 64, 48), atmoMat));
 
   // Network links.
-  const linkMat = new THREE.LineBasicMaterial({ color: 0x38e1ff, transparent: true, opacity: 0.18 });
+  const linkMat = new THREE.LineBasicMaterial({ color: 0x00ff9c, transparent: true, opacity: 0.2 });
   const arcPoints = (a, b, lift = 0.18) => {
     const v1 = latLon(a.lat, a.lon, R * 1.01), v2 = latLon(b.lat, b.lon, R * 1.01);
     const mid = v1.clone().add(v2).multiplyScalar(0.5);
@@ -163,9 +164,9 @@ export function createGlobe(container, { land, interactive = true, autoRotate = 
   bGeo.translate(0, 0.5, 0);
   const bMesh = new THREE.InstancedMesh(bGeo, new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0.2 }), BLD);
   district.add(bMesh);
-  const aMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshBasicMaterial({ color: 0x38e1ff }), 24);
+  const aMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshBasicMaterial({ color: 0x00ff9c }), 24);
   district.add(aMesh);
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(7.5, 48), new THREE.MeshBasicMaterial({ color: 0x0a1c2c, transparent: true, opacity: 0.92 }));
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(7.5, 48), new THREE.MeshBasicMaterial({ color: 0x021a0e, transparent: true, opacity: 0.92 }));
   ground.rotation.x = -Math.PI / 2; ground.position.y = 0.05;
   district.add(ground);
   const tmpM = new THREE.Matrix4(), tmpC = new THREE.Color(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpP = new THREE.Vector3();
@@ -287,15 +288,15 @@ export function createGlobe(container, { land, interactive = true, autoRotate = 
   resize();
 
   let snapshot = null;
-  const statusColor = new THREE.Color(0x38e1ff);
+  const statusColor = new THREE.Color(0x00ff9c);
   function update(snap) {
     snapshot = snap;
     if (!snap) return;
     const aliveFrac = snap.summary.aliveFrac;
     const danger = Math.max(1 - aliveFrac, snap.summary.rogue * 1.4, snap.status === 'apex' ? 1 : 0);
-    statusColor.setRGB(0.22 + danger * 0.78, 0.88 - danger * 0.6, 1 - danger * 0.65);
+    statusColor.setRGB(danger, 1 - danger * 0.75, 0.61 - danger * 0.25);
     atmoMat.uniforms.color.value.copy(statusColor);
-    dotMat.color.setRGB(0.24 + danger * 0.76, 0.94 - danger * 0.62, 0.63 - danger * 0.3);
+    dotMat.color.setRGB(danger, 1 - danger * 0.7, 0.61 - danger * 0.3);
     dotMat.opacity = 0.35 + aliveFrac * 0.45;
     for (const c of snap.cities) {
       const m = markers.get(c.id);

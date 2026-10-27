@@ -3,6 +3,8 @@ import { t, setLang, getLang, applyStatic, STRINGS, esc } from './i18n.js';
 import { createIntro, introStoryboard } from './intro.js';
 import { createProof } from './proof.js';
 import { createChecklist } from './checklist.js';
+import { unlock, ambient, setMuted, isMuted } from './audio.js';
+import { createRain } from './rain.js';
 
 const $ = s => document.querySelector(s);
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -25,7 +27,14 @@ async function boot() {
       introEl.setAttribute('aria-hidden', 'true');
     }
   });
-  const startIntro = () => { document.body.classList.add('intro-on'); introEl.removeAttribute('aria-hidden'); window.scrollTo({ top: 0 }); intro.start(); };
+  // The intro opens on a start gate: browsers only allow sound after a tap.
+  const gate = $('[data-intro-gate]');
+  const gateRain = reduced ? null : createRain(gate.querySelector('.gate-rain'), { opacity: 0.7 });
+  const startIntro = () => { document.body.classList.add('intro-on'); introEl.removeAttribute('aria-hidden'); window.scrollTo({ top: 0 }); gate.hidden = false; gateRain?.play(); };
+  const play = silent => { unlock(); if (silent) setMuted(true); else if (isMuted()) setMuted(false); ambient(true); gate.hidden = true; gateRain?.pause(); intro.start(); };
+  $('[data-intro-start]').addEventListener('click', () => play(false));
+  $('[data-intro-start-silent]').addEventListener('click', () => play(true));
+  $('[data-intro-skip-gate]').addEventListener('click', () => { gate.hidden = true; gateRain?.pause(); intro.skip(); });
   $('[data-intro-skip]').addEventListener('click', () => intro.skip());
   $('[data-intro-pause]').addEventListener('click', e => { e.currentTarget.textContent = intro.toggle() ? t('intro_pause') : t('intro_play'); });
   document.querySelectorAll('[data-intro-replay]').forEach(b => b.addEventListener('click', startIntro));
@@ -36,9 +45,9 @@ async function boot() {
   } else startIntro();
 
   // Proof
-  let twins = null, play = null;
+  let twins = null;
   const proof = createProof($('#proof'), {
-    onTrained: ({ weights }) => { twins?.useMyWeights(weights); play?.useWeights(weights); }
+    onTrained: ({ weights }) => { twins?.useMyWeights(weights); }
   });
 
   // Lazy-load the 3D parts (Three.js) when needed.
@@ -54,12 +63,6 @@ async function boot() {
     if (proof.trained) twins.useMyWeights(proof.trained.exportWeights());
     res(twins);
   }));
-  ready.play = new Promise(res => lazy($('#play'), async () => {
-    if (!land || !ckpt) return;
-    const { createPlay } = await import('./play.js');
-    play = createPlay($('#play'), { land, defaultWeights: ckpt.weights });
-    res(play);
-  }));
 
   // Checklist + navigation targets ("Show me")
   const navigate = async target => {
@@ -70,13 +73,7 @@ async function boot() {
       case 'twins': go('#twins'); break;
       case 'builders': go('#builders'); break;
       case 'checklist': checklist.open(); break;
-      default: {
-        go('#play');
-        const p = await ready.play;
-        if (target === 'play-teacher') p.focus('teacher');
-        if (target === 'play-villain') p.focus('villain');
-        if (target === 'play-city') p.focus('city');
-      }
+      default: location.href = 'play/';
     }
   };
   const checklist = await createChecklist($('#checklist'), { navigate });
@@ -96,6 +93,10 @@ async function boot() {
     box.querySelectorAll('[data-code-tab]').forEach(x => x.classList.toggle('on', x === b));
     box.querySelectorAll('.code').forEach(x => (x.hidden = x.dataset.code !== b.dataset.codeTab));
   }));
+
+  // Matrix rain behind the hero.
+  const heroRain = document.querySelector('.hero-rain');
+  if (heroRain && !reduced) createRain(heroRain, { opacity: 0.55, density: 0.7 });
 
   // Header state
   const header = $('.site-header');

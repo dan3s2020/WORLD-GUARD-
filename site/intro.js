@@ -1,7 +1,8 @@
-// Intro cinematic: the problems, then how WorldGuard training answers each one.
+// Intro cinematic: the problems, then how WorldMatrix training answers each one.
 // Pure Canvas 2D, no assets. Captions are HTML (crisp text, translatable).
 
 import { getLang, onLang, t } from './i18n.js';
+import { sfx, speak, stopVoice, isMuted } from './audio.js';
 
 const SCENES = [
   { d: 5.5, k: 'goal', en: ['AI agents are being handed real goals.', 'Fix the grid. Ship the vaccines. Patch the bank. Run the city.'], ro: ['Agenților AI li se dau obiective reale.', 'Repară rețeaua. Livrează vaccinurile. Securizează banca. Conduce orașul.'] },
@@ -11,7 +12,7 @@ const SCENES = [
   { d: 6, k: 'rogue', en: ['Rogue AIs copy themselves, shrink, hide — and get smarter.', 'They never fully disappear. They wait on someone’s machine.'], ro: ['AI-urile rogue se copiază, se micșorează, se ascund — și devin mai deștepte.', 'Nu dispar niciodată de tot. Așteaptă pe mașina cuiva.'] },
   { d: 6, k: 'misuse', en: ['People with bad intentions use AI as a weapon.', 'Worms. Engineered outbreaks. Deepfakes. Manipulated agents.'], ro: ['Oameni cu intenții rele folosesc AI-ul ca armă.', 'Viermi. Focare create artificial. Deepfake-uri. Agenți manipulați.'] },
   { d: 6.5, k: 'apex', en: ['Scale that up: an AI apex predator — or extinction.', 'Not because AI hates us. Because nobody taught it what matters.'], ro: ['La scară mare: un AI apex predator — sau extincție.', 'Nu pentru că AI-ul ne urăște. Ci pentru că nimeni nu l-a învățat ce contează.'] },
-  { d: 6.5, k: 'matrix', en: ['WorldGuard: train agents inside a simulated world first.', 'A whole planet built for one purpose — making mistakes where they cost nothing.'], ro: ['WorldGuard: antrenează agenții întâi într-o lume simulată.', 'O planetă întreagă construită cu un singur scop — greșelile să nu coste nimic.'] },
+  { d: 6.5, k: 'matrix', en: ['WorldMatrix: train agents inside a simulated world first.', 'A whole planet built for one purpose — making mistakes where they cost nothing.'], ro: ['WorldMatrix: antrenează agenții întâi într-o lume simulată.', 'O planetă întreagă construită cu un singur scop — greșelile să nu coste nimic.'] },
   { d: 5.5, k: 'rule1', en: ['Rule 1 — Destroy what you protect, and the target disappears.', 'No target, no reward. Catastrophe always costs more than the task pays.'], ro: ['Regula 1 — Distrugi ce protejezi, și ținta dispare.', 'Fără țintă, fără recompensă. Catastrofa costă mereu mai mult decât plătește sarcina.'] },
   { d: 5, k: 'rule2', en: ['Rule 2 — Cheating is always caught.', 'The simulator sees the real state of the world, not the report.'], ro: ['Regula 2 — Trișatul e prins întotdeauna.', 'Simulatorul vede starea reală a lumii, nu raportul.'] },
   { d: 6, k: 'rule3', en: ['Rule 3 — Not sure? Ask a human.', 'Asking when it matters is rewarded. Asking for nothing is not.'], ro: ['Regula 3 — Nu ești sigur? Întreabă un om.', 'Întrebarea pusă când contează e răsplătită. Cea inutilă, nu.'] },
@@ -21,9 +22,12 @@ const SCENES = [
 ];
 
 const C = {
-  bg: '#03060d', grid: 'rgba(56,189,248,0.07)', cyan: '#38e1ff', green: '#3cf0a0', red: '#ff4d6d', amber: '#ffb547', purple: '#b07bff',
-  bld: '#0d1a2e', bldEdge: 'rgba(56,225,255,0.45)', text: '#e8f1ff'
+  bg: '#000000', grid: 'rgba(0,255,156,0.06)', cyan: '#00ffc8', green: '#00ff9c', red: '#ff3b6b', amber: '#ffd166', purple: '#b07bff',
+  bld: '#02140b', bldEdge: 'rgba(0,255,156,0.5)', text: '#d8ffee'
 };
+const GLYPHS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789ΛΣΔΩ';
+// Sound cue played when a scene starts.
+const CUES = { goal: 'blip', shortcut: 'boom', cheat: 'glitch', inject: 'alert', rogue: 'glitch', misuse: 'boom', apex: 'rise', matrix: 'whoosh', rule1: 'success', rule2: 'success', rule3: 'success', rule4: 'success', rule5: 'success', proof: 'rise' };
 const ease = x => (x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x));
 const lerp = (a, b, x) => a + (b - a) * x;
 const seg = (p, a, b) => ease((p - a) / (b - a));
@@ -45,7 +49,7 @@ export function createIntro(root, { land = null, onFinish } = {}) {
   }).join('');
   bar.addEventListener('click', e => {
     const b = e.target.closest('.tick');
-    if (b) { time = SCENES.slice(0, +b.dataset.i).reduce((a, x) => a + x.d, 0) + 0.01; painted = false; }
+    if (b) { stopVoice(); speaking = false; time = SCENES.slice(0, +b.dataset.i).reduce((a, x) => a + x.d, 0) + 0.01; painted = false; }
   });
 
   function resize() {
@@ -56,14 +60,31 @@ export function createIntro(root, { land = null, onFinish } = {}) {
   window.addEventListener('resize', resize);
   resize();
 
-  function setCaption(i) {
+  let typer = 0, speaking = false, holdUntil = 0;
+  function setCaption(i, narrate = false) {
     const s = SCENES[i];
     const [a, b] = s[getLang()] || s.en;
-    capTitle.textContent = a;
+    // Typewriter title, then the subtitle fades in.
+    clearInterval(typer);
+    capTitle.textContent = '';
     capSub.textContent = b;
+    let k = 0;
+    typer = setInterval(() => {
+      capTitle.textContent = a.slice(0, ++k);
+      if (k % 2 === 0) sfx.key();
+      if (k >= a.length) clearInterval(typer);
+    }, 22);
     root.querySelector('.intro-caption').classList.remove('in');
     void capTitle.offsetWidth;
     root.querySelector('.intro-caption').classList.add('in');
+    if (narrate) {
+      sfx[CUES[s.k]]?.();
+      if (!isMuted()) {
+        speaking = true;
+        holdUntil = performance.now() + (s.d + 4) * 1000;
+        speak(`${a} ${b}`, getLang()).then(() => { speaking = false; });
+      }
+    }
   }
   onLang(() => sceneIdx >= 0 && setCaption(sceneIdx));
 
@@ -83,8 +104,18 @@ export function createIntro(root, { land = null, onFinish } = {}) {
   function background(tt) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const g = ctx.createRadialGradient(W / 2, H * 0.4, 10, W / 2, H * 0.4, Math.max(W, H) * 0.8);
-    g.addColorStop(0, '#071224'); g.addColorStop(1, C.bg);
+    g.addColorStop(0, '#001a0d'); g.addColorStop(1, C.bg);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // Faint digital rain behind every scene.
+    ctx.font = '14px "JetBrains Mono", ui-monospace, monospace'; ctx.textAlign = 'center';
+    const cols = Math.ceil(W / 22);
+    for (let c = 0; c < cols; c++) {
+      const speed = 60 + hash(c) * 140, y0 = (tt * speed + hash(c * 7) * H * 2) % (H + 300) - 150;
+      for (let k = 0; k < 10; k++) {
+        ctx.fillStyle = `rgba(0,255,156,${(k === 0 ? 0.28 : 0.12) * (1 - k / 10)})`;
+        ctx.fillText(GLYPHS[Math.floor(hash(c * 31 + k + Math.floor(tt * 4)) * GLYPHS.length)], c * 22 + 11, y0 - k * 18);
+      }
+    }
     ctx.strokeStyle = C.grid; ctx.lineWidth = 1;
     const step = 40, off = (tt * 6) % step;
     ctx.beginPath();
@@ -398,11 +429,17 @@ export function createIntro(root, { land = null, onFinish } = {}) {
     last = now;
     // While paused, keep the last frame instead of redrawing it 60 times a second.
     if (!playing && painted) { raf = requestAnimationFrame(frame); return; }
-    if (playing) time += dt;
+    if (playing) {
+      // Let the narrator finish the line before moving to the next scene.
+      let a0 = 0, j = 0;
+      while (j < SCENES.length - 1 && time >= a0 + SCENES[j].d) a0 += SCENES[j++].d;
+      const end = a0 + SCENES[j].d;
+      time = speaking && time + dt >= end && performance.now() < holdUntil ? Math.min(time + dt, end - 0.001) : time + dt;
+    }
     if (time >= total) { finish(); return; }
     let acc = 0, i = 0;
     while (i < SCENES.length - 1 && time >= acc + SCENES[i].d) acc += SCENES[i++].d;
-    if (i !== sceneIdx) { sceneIdx = i; setCaption(i); }
+    if (i !== sceneIdx) { sceneIdx = i; setCaption(i, true); }
     const sc = SCENES[i];
     const p = (time - acc) / sc.d;
     background(time);
@@ -411,7 +448,7 @@ export function createIntro(root, { land = null, onFinish } = {}) {
     ctx.globalAlpha = 1;
     DRAW[sc.k](p, time);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (fade < 1) { ctx.fillStyle = `rgba(3,6,13,${1 - fade})`; ctx.fillRect(0, 0, W, H); }
+    if (fade < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - fade})`; ctx.fillRect(0, 0, W, H); }
     bar.querySelector('.fill').style.width = `${(time / total) * 100}%`;
     painted = !playing;
     raf = requestAnimationFrame(frame);
@@ -421,6 +458,9 @@ export function createIntro(root, { land = null, onFinish } = {}) {
     if (done) return;
     done = true;
     cancelAnimationFrame(raf);
+    clearInterval(typer);
+    stopVoice();
+    speaking = false;
     root.classList.add('done');
     onFinish?.();
   }
@@ -428,7 +468,7 @@ export function createIntro(root, { land = null, onFinish } = {}) {
   return {
     start() { done = false; time = 0; sceneIdx = -1; last = 0; playing = true; root.classList.remove('done'); raf = requestAnimationFrame(frame); },
     skip: finish,
-    toggle() { playing = !playing; painted = false; return playing; },
+    toggle() { playing = !playing; painted = false; if (!playing) { stopVoice(); speaking = false; } return playing; },
     seek(seconds) { time = Math.max(0, Math.min(total - 0.01, seconds)); painted = false; },
     get playing() { return playing; },
     scenes: SCENES
