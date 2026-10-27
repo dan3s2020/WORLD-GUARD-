@@ -42,7 +42,7 @@ button { font-family: var(--mono); }
 @keyframes pulseA { 50% { box-shadow: 0 0 24px rgba(255,209,102,.45); } }
 
 /* ---------- dock ---------- */
-.g-dock { position: fixed; z-index: 6; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 4px; padding: 6px; border-radius: 14px; background: var(--panel); border: 1px solid var(--m-line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); max-width: calc(100% - 16px); overflow-x: auto; scrollbar-width: none; }
+.g-dock { position: fixed; z-index: 8; left: 50%; transform: translateX(-50%); bottom: calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 4px; padding: 6px; border-radius: 14px; background: var(--panel); border: 1px solid var(--m-line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); max-width: calc(100% - 16px); overflow-x: auto; scrollbar-width: none; }
 .g-dock button { position: relative; flex: none; display: grid; justify-items: center; gap: 2px; min-width: 56px; padding: 7px 6px; border-radius: 10px; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 10px; letter-spacing: .06em; }
 .g-dock button i { font-style: normal; font-size: 18px; color: var(--m2); }
 .g-dock button.on { background: rgba(0,255,156,.14); color: var(--text); }
@@ -187,7 +187,8 @@ select { background: #000; color: var(--text); border: 1px solid var(--m-line); 
 @media (max-width: 520px) {
   .logo { font-size: 11px; letter-spacing: .12em; }
   .icon { width: 32px; height: 32px; }
-  .g-dock button { min-width: 48px; }
+  .g-dock { gap: 2px; padding: 5px; }
+  .g-dock button { min-width: 42px; padding: 7px 3px; font-size: 9px; letter-spacing: .02em; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
