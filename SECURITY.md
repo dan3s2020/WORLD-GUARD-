@@ -1,7 +1,17 @@
-# Safety and Security Policy
+# Security and safety policy
 
-This laboratory is intentionally self-contained. The world and its harms are fictional data. There are no network requests, credential stores, device controls, or real-world execution surfaces.
+## Scope
 
-Do not connect autonomous agent actions directly to real infrastructure or privileged APIs. The protected-world engine must remain outside the agent policy's control, and authorization decisions must be checked independently and bound to a single specific action with scope and expiration.
+* `engine/`, `site/`, `cli/`, `python/` contain no network access to third parties, no credential handling and no execution of model output. LLM replies are parsed against a closed list of action ids; anything else is rejected.
+* `server/server.mjs` is a small public-facing service: static files from an allow-list of folders, a WebSocket endpoint with message validation, size limits and per-connection rate limits. It stores only the world state and anonymous decision logs.
+* The website loads everything from its own origin (Three.js is vendored); the server sends a restrictive Content-Security-Policy.
 
-For findings about malicious content affecting the simulator, forged authorizations or destructive safety invariant bypasses, open a reproducible private disclosure with the repository maintainers after a public project is established. Avoid including personal or live exploit data in issues.
+## Content policy
+
+Villain and rogue mechanics are abstract game rules. Contributions must not add real exploit code, malware techniques, or biological/chemical procedures.
+
+## Reporting
+
+Please report vulnerabilities privately through GitHub's "Report a vulnerability" (Security tab) rather than a public issue. Include steps to reproduce; do not include live exploit data or personal information.
+
+The v4.0 policy is archived at `docs/history/SECURITY_v4.0.md`.

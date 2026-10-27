@@ -2,13 +2,10 @@ node_modules/
 .DS_Store
 .env
 .env.*
-!.env.example
 *.log
-coverage/
-*.zip
 __pycache__/
-
+*.egg-info/
+server/data/
+data/*.jsonl
+/checkpoints/
 test-results/
-playwright-report/
-premium-audit.json
-checkpoints/
