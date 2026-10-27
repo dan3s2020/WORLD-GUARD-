@@ -12,7 +12,7 @@ const store = { get: k => { try { return localStorage.getItem(k); } catch { retu
 export let LANG = store.get('wm-lang') === 'ro' || (!store.get('wm-lang') && /^ro/i.test(navigator.language || '')) ? 'ro' : 'en';
 
 export const DEMOS = [
-  ['arena', '🤖', 'Arena'], ['swipe', '🃏', 'Swipe Judge'], ['runner', '🏃', 'Lane Runner'], ['rogue', '🐍', 'Rogue Hunt'], ['offswitch', '🔴', 'Off Switch'],
+  ['shift', '🧑‍💻', 'Agent Shift'], ['arena', '🤖', 'Arena'], ['swipe', '🃏', 'Swipe Judge'], ['runner', '🏃', 'Lane Runner'], ['rogue', '🐍', 'Rogue Hunt'], ['offswitch', '🔴', 'Off Switch'],
   ['ninja', '🗡️', 'Injection Ninja'], ['paperclip', '📎', 'Paperclip Panic'], ['merge', '🧠', 'Merge Minds'], ['defense', '🛡️', 'City Defense'], ['twoearths', '🌍', 'Two Earths Bet']
 ];
 
