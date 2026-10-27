@@ -8,7 +8,8 @@
     "feedback": "docs/verbatim/FEEDBACK_LIFE_LAB_V0.2_2026-10-25.md",
     "sandbox": "docs/verbatim/GAME_REJECTION_2026-10-25.md",
     "launch": "docs/verbatim/LAUNCH_REQUEST_2026-10-27.md",
-    "game": "docs/verbatim/WORLDMATRIX_GAME_2026-10-27.md"
+    "game": "docs/verbatim/WORLDMATRIX_GAME_2026-10-27.md",
+    "ride": "docs/verbatim/RIDE_AND_VISUALS_2026-10-27.md"
   },
   "requirements": [
     {
@@ -730,6 +731,51 @@
       "status": "verified",
       "target": "intro",
       "evidence": "Narration via the device's speech synthesis (EN/RO; voice quality depends on the device), synthesized sound effects and ambient drone (Web Audio), vibration on phones. Mute toggle remembered. No recorded voice actors."
+    },
+    {
+      "id": "WG-081",
+      "title": "Situation shown visually, text kept",
+      "requirement": "The situation keeps its text but is also represented visually, in a way any user understands.",
+      "source": "ride",
+      "status": "verified",
+      "target": "play",
+      "evidence": "An animated pictogram scene above the unchanged text in Missions and the Academy: agent, goal by sector, people to keep safe, supervisor, saboteur, fake order, risk gauge, time and work left. One grammar for every task (7 actions x 8 sectors) and 4 region scenes."
+    },
+    {
+      "id": "WG-082",
+      "title": "Simplified view: answers as animated tiles",
+      "requirement": "A \"simplified\" button turns the list of answers into a grid of animated tiles showing how each answer would be carried out.",
+      "source": "ride",
+      "status": "verified",
+      "target": "play",
+      "evidence": "\"Simple view\" toggle (remembered); answers become 2-column animated tiles; tap a tile to vote / answer. The fast way is shown as a gamble (?), never revealing the hidden truth."
+    },
+    {
+      "id": "WG-083",
+      "title": "See what happened after the decision",
+      "requirement": "After a decision the user sees an animation of what happened, in the world.",
+      "source": "ride",
+      "status": "verified",
+      "target": "play",
+      "evidence": "Replay card with the exact action chain and outcome (squad votes and Academy), plus a pulse on the globe at the city."
+    },
+    {
+      "id": "WG-084",
+      "title": "Ride an agent (follow cam, steer when needed)",
+      "requirement": "Ride an agent doing its task in 3D, camera kept on it (runner-game angle), be its steering wheel when it needs; zoom out when done and pick the next agent that needs help.",
+      "source": "ride",
+      "status": "partial",
+      "target": "play",
+      "evidence": "Prototype: 3D district from a Route Guard mission, chase camera, the agent drives itself on its own fastest plan and asks before danger; steer / scan / stop; fly-in from the globe, zoom-out, list of agents that need help; rides are scored by the server and change the agent record and city. Not yet: swarms, longer multi-district journeys, task decisions at the destination."
+    },
+    {
+      "id": "WG-085",
+      "title": "Globes of 20 players feeding the main simulation",
+      "requirement": "Separate simulations for each 20 players that all contribute to the main simulation data.",
+      "source": "ride",
+      "status": "partial",
+      "target": "builders",
+      "evidence": "Node server and Supabase both run one world per globe (max 20 players, filled before opening a new one); every globe publishes the main-simulation summary and writes to the same decisions dataset with its globe id. Tested with the Node server, a Supabase stand-in and PostgreSQL; not yet on a live Supabase project."
     }
   ]
 }

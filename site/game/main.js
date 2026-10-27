@@ -284,8 +284,8 @@ function render() {
   $('#hud-alive').textContent = fmtPeople(sm.alive);
   $('#hud-rogue').textContent = `${Math.round(sm.rogue * 100)}%`;
   $('#hud-hour').textContent = w.tick;
-  $('#hud-online').textContent = `${st.online} ${tr('online')}`;
-  $('#conn').textContent = tr('mode_' + state.net.mode);
+  $('#hud-online').textContent = `${st.online}/${st.main?.size ?? 20} ${tr('online')}`;
+  $('#conn').textContent = `${tr('mode_' + state.net.mode)} · ${tr('globe_n', { g: st.shard ?? 1 })}${st.main ? ` · ${tr('main_line', { g: st.main.globes, n: st.main.online })}` : ''}`;
   const open = (w.dilemmas || []).length;
   const alert = $('#alert');
   alert.hidden = !(open && state.profile?.role === 'guard' && state.tab !== 'missions');

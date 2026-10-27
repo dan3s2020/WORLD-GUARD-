@@ -14,12 +14,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createQNet } from '../engine/policy.js';
 import { createService, upsertPlayer, applyAction, advance, publicState, agentsDetail, takeDecisionLog, publicPlayer, VILLAIN_ACTIONS } from '../engine/world-service.js';
+import { pickShard, mainSummary, SHARD_SIZE as DEFAULT_SHARD_SIZE } from '../engine/shards.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = +(process.env.PORT || 8787);
 const TICK_MS = +(process.env.TICK_MS || 1000);
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(ROOT, 'server', 'data'));
 const MAX_CLIENTS = +(process.env.MAX_CLIENTS || 1000);
+const SHARD_SIZE = +(process.env.SHARD_SIZE || DEFAULT_SHARD_SIZE); // players per globe
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const STATE_FILE = path.join(DATA_DIR, 'world.json');
@@ -28,23 +30,33 @@ const DECISIONS_FILE = path.join(DATA_DIR, 'decisions.jsonl');
 const ckpt = JSON.parse(fs.readFileSync(path.join(ROOT, 'engine/checkpoints/default.json'), 'utf8'));
 const policy = createQNet({ weights: ckpt.weights }).policy;
 
-let svc = load();
+// One world per globe ("shard"); every globe feeds the main simulation summary and dataset.
+const shards = load();
 function load() {
   try {
     const s = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-    if (s && s.v === 1 && s.world) return s;
+    if (s && s.v === 1 && s.world) return { 1: s };                // single-world save from v1.0
+    if (s && s.v === 2 && s.shards) return s.shards;
   } catch { /* first start */ }
-  return createService();
+  return { 1: createService({ seed: `world:${Date.now()}:1` }) };
 }
 function save() {
   const tmp = STATE_FILE + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(svc));
+  fs.writeFileSync(tmp, JSON.stringify({ v: 2, shards }));
   fs.renameSync(tmp, STATE_FILE);
 }
 function flushDecisions() {
-  const log = takeDecisionLog(svc);
-  if (log.length) fs.appendFile(DECISIONS_FILE, log.map(x => JSON.stringify({ time: new Date().toISOString(), ...x })).join('\n') + '\n', () => {});
+  const lines = [];
+  for (const [id, svc] of Object.entries(shards)) for (const x of takeDecisionLog(svc)) lines.push(JSON.stringify({ time: new Date().toISOString(), shard: Number(id), ...x }));
+  if (lines.length) fs.appendFile(DECISIONS_FILE, lines.join('\n') + '\n', () => {});
 }
+const connectedPerShard = () => {
+  const counts = Object.fromEntries(Object.keys(shards).map(id => [id, 0]));
+  for (const c of clients.values()) counts[c.shard] = (counts[c.shard] || 0) + 1;
+  return counts;
+};
+let main = null;
+const stateFor = (id, now = Date.now()) => ({ ...publicState(shards[id], now), shard: Number(id), main });
 
 // ---------------------------------------------------------------------------
 // Static files
@@ -81,11 +93,15 @@ function serveStatic(req, res) {
 
 const server = http.createServer((req, res) => {
   if (req.url === '/api/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, tick: svc.world.tick, players: clients.size }));
+    res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ ok: true, tick: shards[1]?.world.tick ?? 0, players: clients.size, globes: Object.keys(shards).length }));
     return;
   }
-  if (req.url === '/api/state') {
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }).end(JSON.stringify(publicState(svc)));
+  if (req.url.split('?')[0] === '/api/state') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }).end(JSON.stringify(stateFor(new URL(req.url, 'http://x').searchParams.get('globe') || 1)));
+    return;
+  }
+  if (req.url === '/api/main') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }).end(JSON.stringify(mainSummary(shards)));
     return;
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return res.writeHead(405).end();
@@ -109,9 +125,9 @@ function encodeFrame(str) {
   return Buffer.concat([header, payload]);
 }
 const send = (sock, obj) => { if (!sock.destroyed && sock.writable) sock.write(encodeFrame(JSON.stringify(obj))); };
-function broadcast(obj) {
+function broadcast(obj, shard = null) {
   const frame = encodeFrame(JSON.stringify(obj));
-  for (const sock of clients.keys()) if (!sock.destroyed && sock.writable) sock.write(frame);
+  for (const [sock, c] of clients) if ((shard === null || c.shard === shard) && !sock.destroyed && sock.writable) sock.write(frame);
 }
 
 server.on('upgrade', (req, sock) => {
@@ -121,10 +137,12 @@ server.on('upgrade', (req, sock) => {
   const accept = crypto.createHash('sha1').update(key + GUID).digest('base64');
   sock.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
   sock.setNoDelay(true);
-  const c = { id: crypto.randomUUID(), msgs: 0, windowStart: Date.now() };
+  const shard = String(pickShard(connectedPerShard(), SHARD_SIZE));
+  shards[shard] ||= createService({ seed: `world:${Date.now()}:${shard}` });
+  const c = { id: crypto.randomUUID(), msgs: 0, windowStart: Date.now(), shard };
   clients.set(sock, c);
-  const p = upsertPlayer(svc, c.id, {}, Date.now());
-  send(sock, { t: 'welcome', you: publicPlayer(p), villainActions: VILLAIN_ACTIONS, state: publicState(svc) });
+  const p = upsertPlayer(shards[shard], c.id, {}, Date.now());
+  send(sock, { t: 'welcome', you: publicPlayer(p), villainActions: VILLAIN_ACTIONS, state: stateFor(shard) });
   let buf = Buffer.alloc(0);
   sock.on('data', chunk => {
     buf = Buffer.concat([buf, chunk]);
@@ -153,6 +171,7 @@ server.on('upgrade', (req, sock) => {
 
 function onMessage(sock, c, text) {
   const now = Date.now();
+  const svc = shards[c.shard];
   if (now - c.windowStart > 5000) { c.windowStart = now; c.msgs = 0; }
   if (++c.msgs > 25) return send(sock, { t: 'error', error: 'rate limited' });
   let m;
@@ -163,25 +182,32 @@ function onMessage(sock, c, text) {
   const res = applyAction(svc, c.id, m, now);
   if (m.t === 'hello') return send(sock, { t: 'you', you: res.you });
   send(sock, { t: 'result', result: res, you: publicPlayer(svc.players[c.id]) });
-  if (res.kind === 'vote' && res.ok && !res.pending) broadcast({ t: 'decided', by: res.by, dilemma: res.dilemma, choice: res.choice, result: res.result });
-  if (res.kind === 'villain' && res.ok) broadcast({ t: 'attack', by: res.by, attack: res.attack });
+  if (res.kind === 'vote' && res.ok && !res.pending) broadcast({ t: 'decided', by: res.by, dilemma: res.dilemma, choice: res.choice, result: res.result }, c.shard);
+  if (res.kind === 'villain' && res.ok) broadcast({ t: 'attack', by: res.by, attack: res.attack }, c.shard);
 }
 
 // ---------------------------------------------------------------------------
 // Main loop
 // ---------------------------------------------------------------------------
+let emptySince = {};
 setInterval(() => {
   const now = Date.now();
-  for (const c of clients.values()) if (svc.players[c.id]) svc.players[c.id].lastSeen = now;
-  advance(svc, 1, policy, now);
+  for (const c of clients.values()) { const p = shards[c.shard]?.players[c.id]; if (p) p.lastSeen = now; }
+  const counts = connectedPerShard();
+  for (const [id, svc] of Object.entries(shards)) {
+    // Globes nobody has played on for 10 minutes are closed (globe 1 always runs).
+    if (id !== '1' && !counts[id]) { emptySince[id] ??= now; if (now - emptySince[id] > 600_000) { delete shards[id]; delete emptySince[id]; continue; } } else delete emptySince[id];
+    advance(svc, 1, policy, now);
+  }
   flushDecisions();
-  broadcast({ t: 'state', state: publicState(svc, now) });
-  for (const [sock, c] of clients) if (svc.players[c.id]) send(sock, { t: 'you', you: publicPlayer(svc.players[c.id]) });
+  main = mainSummary(shards, now);
+  for (const id of Object.keys(shards)) if (counts[id]) broadcast({ t: 'state', state: stateFor(id, now) }, id);
+  for (const [sock, c] of clients) { const p = shards[c.shard]?.players[c.id]; if (p) send(sock, { t: 'you', you: publicPlayer(p) }); }
 }, TICK_MS);
 setInterval(save, 60_000);
 process.on('SIGINT', () => { save(); process.exit(0); });
 process.on('SIGTERM', () => { save(); process.exit(0); });
 
 server.listen(PORT, () => {
-  console.log(`WorldMatrix shared world on http://localhost:${PORT}  (game: /play/, WebSocket /ws, tick ${TICK_MS} ms, data ${DATA_DIR})`);
+  console.log(`WorldMatrix shared world on http://localhost:${PORT}  (game: /play/, WebSocket /ws, tick ${TICK_MS} ms, ${SHARD_SIZE} players per globe, data ${DATA_DIR})`);
 });

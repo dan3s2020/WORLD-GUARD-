@@ -7,6 +7,7 @@
 import { CONFIG } from './config.js';
 import { createService, upsertPlayer, applyAction, advance, publicState, agentsDetail, publicPlayer } from '../engine/world-service.js';
 import { createQNet } from '../engine/policy.js';
+import { mainSummary } from '../engine/shards.js';
 
 function emitter() {
   const h = {};
@@ -45,7 +46,7 @@ function connectLocal(weights, profile) {
   store.set('wm-local-id', id);
   upsertPlayer(svc, id, profile);
   let timer = 0, saveTimer = 0;
-  const publish = () => { ev.emit('state', publicState(svc)); ev.emit('you', publicPlayer(svc.players[id])); };
+  const publish = () => { ev.emit('state', { ...publicState(svc), shard: 1, main: mainSummary({ 1: svc }) }); ev.emit('you', publicPlayer(svc.players[id])); };
   const loop = () => { svc.players[id].lastSeen = Date.now(); advance(svc, 1, policy); publish(); };
   timer = setInterval(loop, 1000);
   saveTimer = setInterval(() => store.set('wm-local-world', svc), 20000);
@@ -132,13 +133,16 @@ async function connectSupabase(url, key, profile) {
   let me = { ...profile };
   const upsertMe = () => rest('players?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: session.user_id, name: me.name, role: me.role, trained: !!me.trained }) });
   await upsertMe();
+  // Join a globe with room (max 20 players each). Every globe feeds the main simulation.
+  let shard = 1;
+  try { shard = Number(await rest('rpc/join_globe', { method: 'POST', body: JSON.stringify({ max_players: 20 }) })) || 1; } catch { /* older database without globes: globe 1 */ }
 
   let lastTick = -1, stopped = false;
   const pending = new Map(); // action id -> kind
   async function poll() {
     if (stopped) return;
     try {
-      const rows = await rest(`world_public?id=eq.1&select=tick,state&tick=gt.${lastTick}`);
+      const rows = await rest(`world_public?id=eq.${shard}&select=tick,state&tick=gt.${lastTick}`);
       if (rows?.length && rows[0].state) {
         lastTick = rows[0].tick;
         const st = rows[0].state;
@@ -168,7 +172,7 @@ async function connectSupabase(url, key, profile) {
     vote: (dilemma, choice) => act('vote', { dilemma, choice }),
     villain: (attack, city) => act('villain', { attack, city }),
     route: payload => act('route', payload),
-    agents: async () => (await rest('world_public?id=eq.1&select=agents'))?.[0]?.agents || [],
+    agents: async () => (await rest(`world_public?id=eq.${shard}&select=agents`))?.[0]?.agents || [],
     close: () => { stopped = true; clearInterval(heartbeat); }
   };
 }

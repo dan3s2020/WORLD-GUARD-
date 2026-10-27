@@ -3,9 +3,9 @@ insert into auth.users values ('11111111-1111-1111-1111-111111111111'), ('222222
 -- player 1
 set role authenticated; select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', false);
 insert into players (id, name, role) values ('11111111-1111-1111-1111-111111111111', 'Neo', 'guard')
-  on conflict (id) do update set name = excluded.name, role = excluded.role;
+  on conflict (id) do update set id = excluded.id, name = excluded.name, role = excluded.role;
 insert into players (id, name, role) values ('11111111-1111-1111-1111-111111111111', 'Neo One', 'villain')
-  on conflict (id) do update set name = excluded.name, role = excluded.role;
+  on conflict (id) do update set id = excluded.id, name = excluded.name, role = excluded.role;
 select 'own player row', name, role from players;
 insert into players (id, name) values ('22222222-2222-2222-2222-222222222222', 'Fake');   -- expect RLS error
 insert into players (id, name) values ('11111111-1111-1111-1111-111111111111', 'x');      -- expect check / conflict error
@@ -30,3 +30,12 @@ insert into decisions (record) values ('{"type":"route"}');
 update actions set processed = true where not processed returning id;
 reset role;
 select 'cron jobs', name, schedule from cron.jobs;
+-- globes (second migration)
+set role authenticated; select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', false);
+select 'globe for player 1', join_globe(1);
+update players set shard = 99;                                               -- expect permission denied (column)
+reset role;
+set role authenticated; select set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', false);
+insert into players (id, name) values ('22222222-2222-2222-2222-222222222222', 'Morpheus');
+select 'globe for player 2', join_globe(1);
+reset role;

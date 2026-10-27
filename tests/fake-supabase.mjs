@@ -71,6 +71,24 @@ export async function startFakeSupabase({ port = 0, anonKey = 'anon-key', servic
       return json(res, 200, { access_token: token, refresh_token: `r-${token}`, expires_in: 3600, user: { id: uid, is_anonymous: true } });
     }
 
+    const rpc = url.pathname.match(/^\/rest\/v1\/rpc\/(\w+)$/);
+    if (rpc) {
+      const bearer = (req.headers.authorization || '').replace(/^Bearer /, '');
+      const uid = tokens.get(bearer);
+      if (rpc[1] !== 'join_globe' || !uid) return json(res, 404, { message: 'not found' });
+      const max = Math.min(50, Math.max(1, data?.max_players ?? 20));
+      const me = db.players.find(p => p.id === uid);
+      if (!me) return json(res, 400, { message: 'call after creating your player row' });
+      const recent = db.players.filter(p => p.id !== uid && Date.now() - Date.parse(p.last_seen) < 45_000);
+      const count = sh => recent.filter(p => (p.shard || 1) === sh).length;
+      me.shard ||= 1;
+      if (count(me.shard) >= max) {
+        const shards = [...new Set(recent.map(p => p.shard || 1))].map(sh => [sh, count(sh)]).filter(([, n]) => n < max).sort((a, b) => b[1] - a[1] || a[0] - b[0]);
+        me.shard = shards.length ? shards[0][0] : Math.max(0, ...recent.map(p => p.shard || 1)) + 1;
+      }
+      me.last_seen = new Date().toISOString();
+      return json(res, 200, me.shard);
+    }
     const m = url.pathname.match(/^\/rest\/v1\/(\w+)$/);
     if (!m || !(m[1] in db)) return json(res, 404, { message: 'not found' });
     const table = m[1];
@@ -104,12 +122,13 @@ export async function startFakeSupabase({ port = 0, anonKey = 'anon-key', servic
           if (!/^[\p{L}\p{N}_ -]{3,20}$/u.test(row.name ?? 'Guest')) return json(res, 400, { code: '23514', message: 'players_name_check' });
           if (row.role && !['guard', 'villain', 'observer'].includes(row.role)) return json(res, 400, { code: '23514', message: 'players_role_check' });
           row.last_seen = new Date().toISOString(); // players_touch trigger
+          if (uid !== 'service') delete row.shard; // column privilege: only join_globe sets it
           const old = db.players.find(p => p.id === row.id);
           if (old) {
             if (!prefer.includes('merge-duplicates')) return json(res, 409, { code: '23505', message: 'duplicate key' });
             Object.assign(old, row); out.push(old); continue;
           }
-          const fresh = { name: 'Guest', role: 'guard', trained: false, ...row };
+          const fresh = { name: 'Guest', role: 'guard', trained: false, shard: 1, ...row };
           db.players.push(fresh); out.push(fresh); continue;
         }
         if (table === 'actions') {
@@ -127,7 +146,9 @@ export async function startFakeSupabase({ port = 0, anonKey = 'anon-key', servic
         }
         if (uid !== 'service') return json(res, 403, { code: '42501', message: 'permission denied' });
         if (table === 'decisions') { const fresh = { id: seq.decisions++, created_at: new Date().toISOString(), ...row }; db.decisions.push(fresh); out.push(fresh); continue; }
-        if (db[table].some(r => r.id === row.id)) return json(res, 409, { code: '23505', message: 'duplicate key' });
+        const existing = db[table].find(r => r.id === row.id);
+        if (existing && prefer.includes('merge-duplicates')) { Object.assign(existing, row); out.push(existing); continue; }
+        if (existing) return json(res, 409, { code: '23505', message: 'duplicate key' });
         db[table].push(row); out.push(row);
       }
       return prefer.includes('return=representation') ? json(res, 201, out.map(r => pick(r, select))) : json(res, 201);

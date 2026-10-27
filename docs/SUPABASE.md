@@ -18,12 +18,13 @@ browser (play/)  ──anonymous sign-in──▶  Supabase Auth
 * `actions` is an append-only queue; row-level security lets a player insert only their own actions; a trigger allows 8 actions per 10 s.
 * `decisions` is the open human-oversight dataset (every resolved squad vote and Route Guard result), readable by anyone.
 * The Edge Function runs the same `engine/world-service.js` rules as the Node server and the offline mode.
+* **Globes**: at most 20 players share one globe (`join_globe()` fills the fullest globe with room, then opens a new one). Each globe is its own `world_private` / `world_public` row; every published state carries the main-simulation summary, and all globes write to the same `decisions` table (with the globe id).
 
 ## Setup (≈15 minutes)
 
 1. **Create a project** at [supabase.com](https://supabase.com).
 2. **Enable anonymous sign-ins**: Authentication → Sign In / Providers → *Allow anonymous sign-ins*. Turning on CAPTCHA protection is recommended for a public game.
-3. **Create the tables**: SQL Editor → paste `supabase/migrations/20261027000000_worldmatrix.sql` → Run.
+3. **Create the tables**: SQL Editor → run `supabase/migrations/20261027000000_worldmatrix.sql`, then `supabase/migrations/20261027010000_globes.sql` (globes of 20 players).
    (or with the CLI: `supabase link --project-ref <ref>` then `supabase db push`)
 4. **Deploy the clock** (Supabase CLI):
    ```bash

@@ -97,3 +97,31 @@ test('edge function entry point requires the tick secret', () => {
   // Script runs and is idempotent.
   execFileSync(process.execPath, ['scripts/sync-supabase.mjs']);
 });
+
+test('globes: at most N players per globe, each globe ticks and publishes, main summary covers all', async t => {
+  const sb = await startFakeSupabase();
+  t.after(() => sb.close());
+  const call = async (path, init = {}, token) => {
+    const r = await fetch(`${sb.url}${path}`, { ...init, headers: { apikey: sb.anonKey, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init.headers || {}) } });
+    const txt = await r.text();
+    return { status: r.status, body: txt ? JSON.parse(txt) : null };
+  };
+  const globes = [];
+  for (let i = 0; i < 5; i++) {
+    const s = (await call('/auth/v1/signup', { method: 'POST', body: '{}' })).body;
+    await call('/rest/v1/players?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ id: s.user.id, name: `P${i}xx`, role: 'guard', shard: 7 }) }, s.access_token);
+    globes.push((await call('/rest/v1/rpc/join_globe', { method: 'POST', body: '{"max_players":2}' }, s.access_token)).body);
+  }
+  assert.deepEqual(globes, [1, 1, 2, 2, 3], 'fill a globe, then open the next; clients cannot pick their globe');
+  const r = await runTick({ url: sb.url, serviceKey: sb.serviceKey });
+  assert.equal(r.globes, 3);
+  assert.equal(r.main.globes, 3);
+  assert.equal(r.main.online, 5);
+  for (const g of [1, 2, 3]) {
+    const row = sb.db.world_public.find(x => x.id === g);
+    assert.ok(row?.state, `globe ${g} published`);
+    assert.equal(row.state.shard, g);
+    assert.equal(row.state.main.online, 5, 'every globe sees the main simulation');
+  }
+  assert.equal(sb.db.world_public.find(x => x.id === 3).state.online, 1);
+});

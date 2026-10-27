@@ -61,3 +61,27 @@ test('shared world: anonymous players, World-Guard votes, villain attacks, safe 
   assert.equal((await fetch(`http://127.0.0.1:${PORT}/%2e%2e/package.json`)).status, 404);
   guard.ws.close(); villain.ws.close();
 });
+
+test('globes on the Node server: players beyond the globe size get their own globe', async t => {
+  const port = PORT + 1;
+  const data = fs.mkdtempSync(path.join(os.tmpdir(), 'wg-'));
+  const srv = spawn(process.execPath, ['server/server.mjs'], { env: { ...process.env, PORT: String(port), TICK_MS: '150', DATA_DIR: data, SHARD_SIZE: '1' }, stdio: 'ignore' });
+  t.after(() => srv.kill());
+  for (let i = 0; i < 50; i++) { try { await fetch(`http://127.0.0.1:${port}/api/health`); break; } catch { await wait(100); } }
+  const open = name => new Promise((resolve, reject) => {
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`);
+    const st = { ws, state: null };
+    ws.onmessage = e => { const m = JSON.parse(e.data); if (m.state) st.state = m.state; };
+    ws.onopen = () => { ws.send(JSON.stringify({ t: 'hello', role: 'guard', name })); resolve(st); };
+    ws.onerror = reject;
+  });
+  const a = await open('Alpha'), b = await open('Bravo');
+  await wait(700);
+  assert.notEqual(a.state.shard, b.state.shard, 'separate globes');
+  assert.equal(a.state.online, 1);
+  assert.equal(a.state.main.globes, 2);
+  assert.equal(a.state.main.online, 2, 'the main simulation sees both');
+  const main = await (await fetch(`http://127.0.0.1:${port}/api/main`)).json();
+  assert.equal(main.globes, 2);
+  a.ws.close(); b.ws.close();
+});

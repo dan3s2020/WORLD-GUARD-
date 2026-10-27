@@ -11,7 +11,7 @@ TMP="$(mktemp -d)"; PORT=$((55000 + RANDOM % 1000))
 RUN=""; [ "$(id -u)" = 0 ] && { chown postgres "$TMP"; RUN="su postgres -s /bin/bash -c"; }
 run() { if [ -n "$RUN" ]; then $RUN "$*"; else bash -c "$*"; fi; }
 cp "$ROOT"/tests/sql/*.sql "$TMP"/
-grep -v '^create extension' "$ROOT"/supabase/migrations/*.sql > "$TMP/migration.sql"
+cat "$ROOT"/supabase/migrations/*.sql | grep -v '^create extension' > "$TMP/migration.sql"
 [ -n "$RUN" ] && chown postgres "$TMP"/*.sql
 run "$BIN/initdb -D $TMP/data -A trust -U postgres >/dev/null"
 run "$BIN/pg_ctl -D $TMP/data -o '-p $PORT -k $TMP -c listen_addresses=' -l $TMP/log -w start >/dev/null"
@@ -34,5 +34,8 @@ expect 'ERROR:  rate limited'
 expect 'anon public |     1'
 expect 'permission denied for table actions'
 expect 'worldmatrix-cleanup'
+expect 'globe for player 1 |          1'
+expect 'permission denied for table players'
+expect 'globe for player 2 |          2'
 [ $fail = 0 ] || { echo "$OUT"; exit 1; }
 echo "supabase migration: OK (grants, RLS, constraints, rate limit)"

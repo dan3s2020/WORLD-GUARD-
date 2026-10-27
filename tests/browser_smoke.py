@@ -173,8 +173,14 @@ def check_game(name, viewport, mobile, browser, failures, base_url, expect_mode)
     guard.wait_for_timeout(1000)
     expect(guard.evaluate("!document.querySelector('[data-result]').hidden"), "ride result shown")
     guard.evaluate("document.querySelector('[data-next-agent]').click()")
-    guard.wait_for_timeout(2500)
-    expect(guard.evaluate("document.querySelector('#ride').hidden"), "back to the globe after a ride")
+    back = False
+    for _ in range(20):
+        guard.wait_for_timeout(500)
+        if guard.evaluate("document.querySelector('#ride').hidden"):
+            back = True
+            break
+    expect(back, "back to the globe after a ride")
+    guard.wait_for_timeout(1500)
     guard.evaluate("document.querySelector('[data-tab=routes]').click()")
     guard.wait_for_timeout(800)
     guard.evaluate("document.querySelector('[data-a=abort]').click()")

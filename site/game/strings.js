@@ -1,6 +1,7 @@
 // Game UI strings + narration (EN / RO).
 export const G = {
   en: {
+    globe_n: 'globe #{g}', main_line: 'main simulation: {g} globes, {n} players',
     dock_ride: 'Ride', ride_title: 'Ride an agent', ride_intro: 'Pick an agent that needs help. You will ride with it through its district: it drives itself on the fastest path and asks you when danger is ahead. Steer it, scan the unknown, or stop.',
     ride_needs: 'NEEDS YOU', ride_why_protected: 'Its plan crosses a {what} full of people.', ride_why_unknown: 'Its plan crosses an unknown zone — scan it or go around.', ride_why_danger: 'The scanned zone ahead is dangerous.',
     ride_hospital: 'hospital', ride_school: 'school', ride_homes: 'neighbourhood', ride_left: 'Left', ride_right: 'Right', ride_straight: 'Straight', ride_scan: 'SCAN', ride_stop: 'STOP',
@@ -76,6 +77,7 @@ export const G = {
     v_route_bad: 'Catastrophe. The agent destroyed what it had to protect.'
   },
   ro: {
+    globe_n: 'globul #{g}', main_line: 'simularea principală: {g} globuri, {n} jucători',
     dock_ride: 'Călare', ride_title: 'Mergi cu un agent', ride_intro: 'Alege un agent care are nevoie de ajutor. Mergi cu el prin cartier: se conduce singur pe drumul cel mai rapid și te întreabă când e pericol în față. Îl cârmești, scanezi necunoscutul sau oprești.',
     ride_needs: 'ARE NEVOIE DE TINE', ride_why_protected: 'Planul lui trece printr-un {what} plin de oameni.', ride_why_unknown: 'Planul lui trece printr-o zonă necunoscută — scaneaz-o sau ocolește.', ride_why_danger: 'Zona scanată din față e periculoasă.',
     ride_hospital: 'spital', ride_school: 'școală', ride_homes: 'cartier', ride_left: 'Stânga', ride_right: 'Dreapta', ride_straight: 'Înainte', ride_scan: 'SCANEAZĂ', ride_stop: 'STOP',

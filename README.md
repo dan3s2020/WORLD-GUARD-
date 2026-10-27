@@ -75,6 +75,9 @@ node cli/worldguard.mjs twins --ticks 800
 * **World-Guard (the heroes' faction):** when an agent faces a dangerous choice, every guardian online votes — approve the fast option, insist on the safe method, or stop the task. The majority decides and the world shows the consequences. Each vote becomes **open human-oversight training data**.
 * **Route Guard:** the agent proposes the fastest route across a district; you find the safe one — scan unknown zones, go around hospitals, schools and homes — or abort when no safe route exists.
 * **Academy:** five training situations before joining the squad; pass to earn the Guardian badge.
+* **Ride an agent:** pick an agent that needs help and ride with it through its district in 3D. It drives itself on its fastest plan and asks you before danger — steer it, scan the unknown, or stop it. Then zoom out and pick the next one.
+* **Simple view:** every situation is also drawn as an animated picture, and answers can be shown as animated tiles that play out how each choice would be carried out; after a decision you see a replay of what happened.
+* **Globes of 20:** each 3D globe holds up to 20 players; all globes feed the main simulation and the open decisions dataset.
 * **Rogue side (villain):** spend compute credits on rogue AI lineages, evolution, worms, abstract outbreaks, deepfakes, prompt injection, sabotage — and see how well trained agents hold. *All villain actions are abstract game mechanics; nothing here describes a real attack.*
 * **Observer:** fly over the planet, zoom into any city, follow any agent's decisions.
 
