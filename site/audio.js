@@ -142,7 +142,7 @@ export function speak(text, lang = 'en', { rate = 0.95, pitch = 0.75 } = {}) {
       const done = () => { if (duck) duck.gain.setTargetAtTime(1, now(), 0.4); resolve(); };
       u.onend = done; u.onerror = done;
       speechSynthesis.speak(u);
-      setTimeout(done, 15000); // safety net
+      setTimeout(done, Math.max(15000, text.length * 120)); // safety net, long enough for long lines
     } catch { resolve(); }
   });
 }

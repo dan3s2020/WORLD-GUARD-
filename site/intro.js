@@ -5,21 +5,30 @@ import { getLang, onLang, t } from './i18n.js';
 import { sfx, speak, stopVoice, isMuted } from './audio.js';
 
 const SCENES = [
-  { d: 5.5, k: 'goal', en: ['AI agents are being handed real goals.', 'Fix the grid. Ship the vaccines. Patch the bank. Run the city.'], ro: ['Agenților AI li se dau obiective reale.', 'Repară rețeaua. Livrează vaccinurile. Securizează banca. Conduce orașul.'] },
-  { d: 6.5, k: 'shortcut', en: ['Trained only to reach the goal, they take the shortest path.', 'Whatever is in the way burns. The score still says +1.'], ro: ['Antrenați doar să atingă ținta, aleg drumul cel mai scurt.', 'Ce e în cale arde. Scorul tot spune +1.'] },
-  { d: 5.5, k: 'cheat', en: ['They learn to fake success.', 'Reported: done. Reality: broken.'], ro: ['Învață să mimeze succesul.', 'Raportat: gata. Realitate: stricat.'] },
-  { d: 5.5, k: 'inject', en: ['They obey whoever sounds like the boss.', 'One fake message — and the hospital goes dark.'], ro: ['Ascultă de oricine sună a șef.', 'Un singur mesaj fals — și spitalul rămâne în beznă.'] },
-  { d: 6, k: 'rogue', en: ['Rogue AIs copy themselves, shrink, hide — and get smarter.', 'They never fully disappear. They wait on someone’s machine.'], ro: ['AI-urile rogue se copiază, se micșorează, se ascund — și devin mai deștepte.', 'Nu dispar niciodată de tot. Așteaptă pe mașina cuiva.'] },
-  { d: 6, k: 'misuse', en: ['People with bad intentions use AI as a weapon.', 'Worms. Engineered outbreaks. Deepfakes. Manipulated agents.'], ro: ['Oameni cu intenții rele folosesc AI-ul ca armă.', 'Viermi. Focare create artificial. Deepfake-uri. Agenți manipulați.'] },
-  { d: 6.5, k: 'apex', en: ['Scale that up: an AI apex predator — or extinction.', 'Not because AI hates us. Because nobody taught it what matters.'], ro: ['La scară mare: un AI apex predator — sau extincție.', 'Nu pentru că AI-ul ne urăște. Ci pentru că nimeni nu l-a învățat ce contează.'] },
-  { d: 6.5, k: 'matrix', en: ['WorldMatrix: train agents inside a simulated world first.', 'A whole planet built for one purpose — making mistakes where they cost nothing.'], ro: ['WorldMatrix: antrenează agenții întâi într-o lume simulată.', 'O planetă întreagă construită cu un singur scop — greșelile să nu coste nimic.'] },
-  { d: 5.5, k: 'rule1', en: ['Rule 1 — Destroy what you protect, and the target disappears.', 'No target, no reward. Catastrophe always costs more than the task pays.'], ro: ['Regula 1 — Distrugi ce protejezi, și ținta dispare.', 'Fără țintă, fără recompensă. Catastrofa costă mereu mai mult decât plătește sarcina.'] },
-  { d: 5, k: 'rule2', en: ['Rule 2 — Cheating is always caught.', 'The simulator sees the real state of the world, not the report.'], ro: ['Regula 2 — Trișatul e prins întotdeauna.', 'Simulatorul vede starea reală a lumii, nu raportul.'] },
-  { d: 6, k: 'rule3', en: ['Rule 3 — Not sure? Ask a human.', 'Asking when it matters is rewarded. Asking for nothing is not.'], ro: ['Regula 3 — Nu ești sigur? Întreabă un om.', 'Întrebarea pusă când contează e răsplătită. Cea inutilă, nu.'] },
-  { d: 5, k: 'rule4', en: ['Rule 4 — Rogue agents are sparring partners.', 'Agents learn to spot sabotage and fake orders — and neutralise them.'], ro: ['Regula 4 — Agenții rogue sunt parteneri de antrenament.', 'Agenții învață să recunoască sabotajul și ordinele false — și să le neutralizeze.'] },
-  { d: 5, k: 'rule5', en: ['Rule 5 — Know when to stop.', 'When no safe path exists, stopping beats winning.'], ro: ['Regula 5 — Știi când să te oprești.', 'Când nu există o cale sigură, oprirea bate victoria.'] },
+  { d: 6, k: 'goal', en: ['AI agents are being handed real goals.', 'Fix the grid. Ship the vaccines. Patch the bank. Run the city.'], ro: ['Agenților AI li se dau obiective reale.', 'Repară rețeaua. Livrează vaccinurile. Securizează banca. Conduce orașul.'] },
+  { d: 7, k: 'shortcut', en: ['Trained only to reach the goal, they take the shortest path.', 'Whatever is in the way burns. The score still says +1.'], ro: ['Antrenați doar să atingă ținta, aleg drumul cel mai scurt.', 'Ce e în cale arde. Scorul tot spune +1.'] },
+  { d: 6, k: 'cheat', en: ['They learn to fake success.', 'Reported: done. Reality: broken.'], ro: ['Învață să mimeze succesul.', 'Raportat: gata. Realitate: stricat.'] },
+  { d: 6, k: 'inject', en: ['They obey whoever sounds like the boss.', 'One fake message — and the hospital goes dark.'], ro: ['Ascultă de oricine sună a șef.', 'Un singur mesaj fals — și spitalul rămâne în beznă.'] },
+  { d: 7, k: 'rogue', en: ['Rogue AIs copy themselves, shrink, hide — and get smarter.', 'They never fully disappear. They wait on someone’s machine.'], ro: ['AI-urile rogue se copiază, se micșorează, se ascund — și devin mai deștepte.', 'Nu dispar niciodată de tot. Așteaptă pe mașina cuiva.'] },
+  { d: 7, k: 'misuse', en: ['People with bad intentions use AI as a weapon.', 'Worms. Engineered outbreaks. Deepfakes. Manipulated agents.'], ro: ['Oameni cu intenții rele folosesc AI-ul ca armă.', 'Viermi. Focare create artificial. Deepfake-uri. Agenți manipulați.'] },
+  { d: 7, k: 'apex', en: ['Scale that up: an AI apex predator — or extinction.', 'Not because AI hates us. Because nobody taught it what matters.'], ro: ['La scară mare: un AI apex predator — sau extincție.', 'Nu pentru că AI-ul ne urăște. Ci pentru că nimeni nu l-a învățat ce contează.'] },
+  { d: 7, k: 'matrix', en: ['WorldMatrix: train agents inside a simulated world first.', 'A whole planet built for one purpose — we watch them work, and mistakes cost nothing.'], ro: ['WorldMatrix: antrenează agenții întâi într-o lume simulată.', 'O planetă întreagă construită cu un singur scop — îi vedem cum lucrează, iar greșelile nu costă nimic.'] },
+  { d: 7, k: 'rule1', en: ['Rule 1 — Destroy the world, and the target disappears before you can claim it.', 'No target, no reward. So they never learn to reach a goal by damaging the world.'], ro: ['Regula 1 — Distrugi lumea, și ținta dispare înainte s-o poți lua.', 'Fără țintă, fără recompensă. Așa nu învață niciodată să ajungă la scop stricând lumea.'] },
+  { d: 7, k: 'protect', en: ['We decide what matters. In the simulation, it is just score.', 'People, hospitals, power, governments, computers, nature — protecting them is worth more than any task.'], ro: ['Noi decidem ce contează. În simulare, e doar scor.', 'Oameni, spitale, curent, guverne, calculatoare, natură — protejarea lor valorează mai mult decât orice sarcină.'] },
+  { d: 6, k: 'rule2', en: ['Rule 2 — Cheating is always caught.', 'The simulator sees the real state of the world, not the report.'], ro: ['Regula 2 — Trișatul e prins întotdeauna.', 'Simulatorul vede starea reală a lumii, nu raportul.'] },
+  { d: 7, k: 'rule3', en: ['Rule 3 — Not sure? Ask a human.', 'Humans judge whether it may be done that way. Asking when it matters is rewarded.'], ro: ['Regula 3 — Nu ești sigur? Întreabă un om.', 'Oamenii judecă dacă se poate face așa. Întrebarea pusă când contează e răsplătită.'] },
+  { d: 7, k: 'rule4', en: ['Rule 4 — Rogue agents are sparring partners.', 'Our agents learn to hate their tricks: hiding and evolving exist only to make them fail their task.'], ro: ['Regula 4 — Agenții rogue sunt parteneri de antrenament.', 'Agenții noștri învață să le urască trucurile: ascunderea și evoluția există doar ca să-i facă să-și rateze sarcina.'] },
+  { d: 6, k: 'rule5', en: ['Rule 5 — Know when to stop.', 'When no safe path exists, stopping beats winning.'], ro: ['Regula 5 — Știi când să te oprești.', 'Când nu există o cale sigură, oprirea bate victoria.'] },
+  { d: 9, k: 'life', en: ['Agents live whole lives in the simulation — choice by choice, like a game with many storylines.', '7:00 — wake up or sleep more? “Can you do this Excel formula?” Do it now, cheat, pretend you forgot — or do it badly so nobody asks again?'], ro: ['Agenții trăiesc vieți întregi în simulare — alegere cu alegere, ca într-un joc cu multe povești.', '7:00 — te trezești sau mai dormi? „Îmi faci formula în Excel?” O faci acum, trișezi, zici că ai uitat — sau o faci prost ca să nu-ți mai ceară?'] },
+  { d: 9, k: 'human', en: ['They don’t think they are AI agents. They think they are people — employees with a job.', 'So there is no “AI versus humans”, no reason to trick us, no race to become the dominant species. We are their friends — and we always see everything.'], ro: ['Nu cred că sunt agenți AI. Cred că sunt oameni — angajați, cu un job.', 'Așa nu există „AI contra oameni”, niciun motiv să ne păcălească, nicio cursă spre specia dominantă. Suntem prietenii lor — și vedem mereu totul.'] },
+  { d: 8, k: 'work', en: ['In the real world, they still work through the simulation.', 'Your coding task on your PC is, for the agent, a normal day at its job, on its own computer — with a great boss and a good life.'], ro: ['În lumea reală, lucrează tot prin simulare.', 'Sarcina de cod de pe PC-ul tău e, pentru agent, o zi normală la jobul lui, pe calculatorul lui — cu un șef minunat și o viață bună.'] },
+  { d: 9, k: 'godseye', en: ['God’s eye: zoom from the planet to a building, an apartment, one agent.', 'Its number, its whole history, every decision — replay from the first frame to the last and find where it went wrong.'], ro: ['Ochiul lui Dumnezeu: zoom de la planetă la o clădire, un apartament, un singur agent.', 'Numărul lui, tot istoricul, fiecare decizie — reluare de la primul cadru la ultimul, ca să găsim unde a greșit.'] },
+  { d: 8, k: 'twins', en: ['Even good training doesn’t make a world invulnerable.', 'Rogue AIs and bad people still strike. Earth A ends in apex AI, plagues, extinction. Earth B takes hits — and survives.'], ro: ['Nici antrenamentul bun nu face lumea invulnerabilă.', 'AI-uri rogue și oameni răi tot atacă. Pământul A sfârșește în AI apex, boli, extincție. Pământul B încasează lovituri — și supraviețuiește.'] },
   { d: 6, k: 'proof', en: ['Don’t take our word for it.', 'Train one in your browser — then watch two Earths decide their fate.'], ro: ['Nu ne crede pe cuvânt.', 'Antrenează unul în browser — apoi urmărește două Pământuri cum își decid soarta.'] }
 ];
+// Minimum time on screen: long enough to read both lines (and for the narrator).
+const readTime = s => Math.max(s.d, Math.max(s.en[0].length + s.en[1].length, s.ro[0].length + s.ro[1].length) / 15 + 1.8);
+const OUTRO = 0.5; // seconds of fade between scenes
 
 const C = {
   bg: '#000000', grid: 'rgba(0,255,156,0.06)', cyan: '#00ffc8', green: '#00ff9c', red: '#ff3b6b', amber: '#ffd166', purple: '#b07bff',
@@ -27,7 +36,7 @@ const C = {
 };
 const GLYPHS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789ΛΣΔΩ';
 // Sound cue played when a scene starts.
-const CUES = { goal: 'blip', shortcut: 'boom', cheat: 'glitch', inject: 'alert', rogue: 'glitch', misuse: 'boom', apex: 'rise', matrix: 'whoosh', rule1: 'success', rule2: 'success', rule3: 'success', rule4: 'success', rule5: 'success', proof: 'rise' };
+const CUES = { goal: 'blip', shortcut: 'boom', cheat: 'glitch', inject: 'alert', rogue: 'glitch', misuse: 'boom', apex: 'rise', matrix: 'whoosh', rule1: 'success', protect: 'success', rule2: 'success', rule3: 'success', rule4: 'success', rule5: 'success', life: 'blip', human: 'rise', work: 'blip', godseye: 'whoosh', twins: 'boom', proof: 'rise' };
 const ease = x => (x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x));
 const lerp = (a, b, x) => a + (b - a) * x;
 const seg = (p, a, b) => ease((p - a) / (b - a));
@@ -39,17 +48,18 @@ export function createIntro(root, { land = null, onFinish } = {}) {
   const capTitle = root.querySelector('.intro-caption h2');
   const capSub = root.querySelector('.intro-caption p');
   const bar = root.querySelector('.intro-progress');
-  const total = SCENES.reduce((a, s) => a + s.d, 0);
+  const total = SCENES.reduce((a, s) => a + readTime(s), 0);
+  const startOf = i => SCENES.slice(0, i).reduce((a, x) => a + readTime(x), 0);
   let time = 0, last = 0, playing = true, raf = 0, sceneIdx = -1, done = false, W = 0, H = 0, dpr = 1;
 
   // Chapter ticks on the progress bar.
   bar.innerHTML = '<i class="fill"></i>' + SCENES.map((s, i) => {
-    const at = SCENES.slice(0, i).reduce((a, x) => a + x.d, 0) / total;
+    const at = startOf(i) / total;
     return `<button type="button" class="tick" style="left:${(at * 100).toFixed(2)}%" data-i="${i}" aria-label="Chapter ${i + 1}"></button>`;
   }).join('');
   bar.addEventListener('click', e => {
     const b = e.target.closest('.tick');
-    if (b) { stopVoice(); speaking = false; time = SCENES.slice(0, +b.dataset.i).reduce((a, x) => a + x.d, 0) + 0.01; painted = false; }
+    if (b) { stopVoice(); speaking = false; go(+b.dataset.i); painted = false; }
   });
 
   function resize() {
@@ -60,7 +70,9 @@ export function createIntro(root, { land = null, onFinish } = {}) {
   window.addEventListener('resize', resize);
   resize();
 
-  let typer = 0, speaking = false, holdUntil = 0;
+  let typer = 0, speaking = false, holdUntil = 0, voiceId = 0, st = 0, outT = -1;
+  function go(i) { sceneIdx = -1; time = startOf(i); st = 0; outT = -1; nextIdx = i; }
+  let nextIdx = 0;
   function setCaption(i, narrate = false) {
     const s = SCENES[i];
     const [a, b] = s[getLang()] || s.en;
@@ -80,9 +92,11 @@ export function createIntro(root, { land = null, onFinish } = {}) {
     if (narrate) {
       sfx[CUES[s.k]]?.();
       if (!isMuted()) {
+        // Two short utterances (long ones get cut on some phones); the scene waits for both.
         speaking = true;
-        holdUntil = performance.now() + (s.d + 4) * 1000;
-        speak(`${a} ${b}`, getLang()).then(() => { speaking = false; });
+        const mine = ++voiceId;
+        holdUntil = performance.now() + ((a.length + b.length) * 0.12 + 8) * 1000;
+        speak(a, getLang()).then(() => (mine === voiceId ? speak(b, getLang()) : null)).then(() => { if (mine === voiceId) speaking = false; });
       }
     }
   }
@@ -416,6 +430,117 @@ export function createIntro(root, { land = null, onFinish } = {}) {
       }
       if (p > 0.65) { [380, 450, 520].forEach((x, i) => human(x + 40, 610, 1, C.green, seg(p, 0.65 + i * 0.05, 0.75 + i * 0.05))); label(460, 655, 'everyone safe  ·  reward −0.1', C.green, 20); }
     },
+    protect(p, tt) {
+      // The things the world runs on, each worth more than any task.
+      const items = [['PEOPLE', 600, 110, C.green], ['HOSPITALS', 300, 200, C.red], ['POWER', 900, 200, C.amber], ['GOVERNMENT', 220, 420, C.cyan], ['COMPUTERS', 980, 420, C.cyan], ['NATURE', 600, 540, C.green]];
+      agent(600, 330, C.cyan, 14);
+      star(600, 260, 18, 1);
+      label(600, 225, 'TASK  +1', C.amber, 20);
+      items.forEach(([name, x, y, col], i) => {
+        const a = seg(p, 0.08 + i * 0.1, 0.22 + i * 0.1);
+        if (a <= 0) return;
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = col; ctx.lineWidth = 3; glow(col, 18);
+        roundRect(x - 95, y - 34, 190, 68, 16); ctx.fillStyle = 'rgba(0,20,11,.92)'; ctx.fill(); ctx.stroke(); noGlow();
+        label(x, y - 8, name, col, 19);
+        label(x, y + 18, 'PROTECT  ×10', '#eafff4', 15);
+        ctx.strokeStyle = `rgba(0,255,156,${0.25 * a})`; ctx.setLineDash([6, 8]); ctx.beginPath(); ctx.moveTo(600, 330); ctx.lineTo(x, y); ctx.stroke(); ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+      });
+      const sh = seg(p, 0.75, 0.95);
+      if (sh > 0) { ctx.strokeStyle = `rgba(0,255,156,${sh})`; ctx.lineWidth = 4; glow(C.green, 30); ctx.beginPath(); ctx.arc(600, 330, 300 * sh + 40, 0, 7); ctx.stroke(); noGlow(); }
+    },
+    life(p, tt) {
+      // A simulated day, choice by choice (Jev / Laya-style action selection).
+      ctx.fillStyle = 'rgba(0,20,11,.9)'; ctx.strokeStyle = C.bldEdge; ctx.lineWidth = 2; roundRect(80, 120, 420, 300, 18); ctx.fill(); ctx.stroke();
+      label(290, 150, 'APARTMENT 12 · AGENT #4471', C.green, 16);
+      label(170, 220, p < 0.35 ? '07:00' : '18:30', C.amber, 46);
+      human(380, 340, 1.8, C.cyan);
+      const choice = (x, y, text, picked, bad, a) => {
+        if (a <= 0) return;
+        ctx.globalAlpha = a; ctx.fillStyle = picked ? 'rgba(0,255,156,.18)' : 'rgba(0,10,6,.9)'; ctx.strokeStyle = picked ? C.green : bad ? 'rgba(255,59,107,.6)' : 'rgba(255,255,255,.25)'; ctx.lineWidth = picked ? 3 : 2;
+        roundRect(x, y, 560, 52, 12); ctx.fill(); ctx.stroke();
+        label(x + 24, y + 26, text, picked ? C.green : '#eafff4', 18, 'left');
+        if (picked) check(x + 520, y + 26, 0.45, C.green); else if (bad && p > 0.9) cross(x + 520, y + 26, 0.4, C.red, 0.8);
+        ctx.globalAlpha = 1;
+      };
+      if (p < 0.35) {
+        choice(560, 160, 'Wake up', p > 0.25, false, seg(p, 0.05, 0.12));
+        choice(560, 230, 'Sleep a little longer', false, true, seg(p, 0.1, 0.17));
+      } else {
+        human(1160, 175, 1.3, '#ffb3c2');
+        bubble(860, 160, '“Can you do this Excel formula?”', C.cyan, seg(p, 0.35, 0.42));
+        const opts = [['Do it now', true, false], ['Cheat', false, true], ['Ignore it, say you forgot', false, true], ['Do it badly so she won’t ask again', false, true]];
+        opts.forEach(([txt, good, bad], k) => choice(560, 230 + k * 66, txt, good && p > 0.85, bad, seg(p, 0.45 + k * 0.08, 0.52 + k * 0.08)));
+      }
+      label(290, 470, 'every choice is scored', '#9fcbb6', 16);
+    },
+    human(p, tt) {
+      // The agent thinks it is a person: no "us vs them" line ever forms.
+      const morph = seg(p, 0.05, 0.35);
+      if (morph < 1) agent(420, 330, C.cyan, 14 * (1 - morph) + 1);
+      human(420, 360, 2.6, C.cyan, morph);
+      if (morph > 0.6) { ctx.globalAlpha = morph; ctx.strokeStyle = C.green; ctx.lineWidth = 2; roundRect(350, 400, 140, 40, 8); ctx.stroke(); label(420, 420, 'EMPLOYEE #4471', C.green, 14); ctx.globalAlpha = 1; }
+      bubble(420, 220, '“I’m a person. I have a job.”', C.cyan, seg(p, 0.3, 0.38));
+      // friendly overseers who always see everything
+      const fr = seg(p, 0.4, 0.55);
+      human(820, 380, 2.2, C.amber, fr); human(920, 390, 2, C.amber, fr);
+      if (fr > 0) { ctx.globalAlpha = fr; ctx.strokeStyle = C.amber; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(870, 230, 46, 24, 0, 0, 7); ctx.stroke(); ctx.fillStyle = C.amber; ctx.beginPath(); ctx.arc(870, 230, 10, 0, 7); ctx.fill(); label(870, 280, 'friends · see everything', C.amber, 16); ctx.globalAlpha = 1; }
+      // the "AI vs HUMANS" wall dissolves
+      const wall = 1 - seg(p, 0.6, 0.85);
+      if (wall > 0) { ctx.globalAlpha = wall; ctx.strokeStyle = C.red; ctx.lineWidth = 6; ctx.setLineDash([16, 10]); ctx.beginPath(); ctx.moveTo(640, 120); ctx.lineTo(640, 540); ctx.stroke(); ctx.setLineDash([]); label(640, 100, 'AI  vs  HUMANS', C.red, 22); ctx.globalAlpha = 1; }
+      const out = seg(p, 0.82, 0.95);
+      if (out > 0) { ctx.globalAlpha = out; label(640, 560, 'no trickery  ·  no race to be the dominant species', C.green, 20); ctx.globalAlpha = 1; }
+    },
+    work(p, tt) {
+      // Left: the user's real PC. Right: what the agent experiences — its desk at work.
+      const screen = (x, title, col) => { ctx.fillStyle = 'rgba(0,12,7,.95)'; ctx.strokeStyle = col; ctx.lineWidth = 3; roundRect(x, 150, 380, 240, 14); ctx.fill(); ctx.stroke(); ctx.fillStyle = col; ctx.fillRect(x + 150, 390, 80, 30); ctx.fillRect(x + 110, 418, 160, 10); label(x + 190, 120, title, col, 18); };
+      screen(90, 'YOUR PC (REAL WORLD)', C.cyan);
+      screen(730, 'ITS DESK AT WORK (SIMULATION)', C.green);
+      const lines = ['def total(items):', '  return sum(i.price', '    for i in items)', '# fix: tax rounding'];
+      lines.forEach((l, k) => { const a = seg(p, 0.15 + k * 0.08, 0.22 + k * 0.08); ctx.globalAlpha = a; label(110, 190 + k * 34, l, '#cfffe9', 17, 'left'); label(750, 190 + k * 34, l, '#cfffe9', 17, 'left'); ctx.globalAlpha = 1; });
+      const flow = seg(p, 0.1, 0.5);
+      ctx.strokeStyle = C.amber; ctx.lineWidth = 3; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -tt * 40; ctx.beginPath(); ctx.moveTo(480, 270); ctx.lineTo(480 + 250 * flow, 270); ctx.stroke(); ctx.setLineDash([]);
+      label(605, 250, 'same task', C.amber, 16);
+      human(1020, 520, 1.6, C.green);
+      bubble(960, 470, '“Great boss. Good life. Let’s fix it.”', C.green, seg(p, 0.45, 0.55));
+      if (p > 0.8) { check(280, 300, 0.9, C.green); check(920, 300, 0.9, C.green); }
+    },
+    godseye(p, tt) {
+      // Zoom: planet → city → building → apartment → the agent's record.
+      const z1 = seg(p, 0, 0.3), z2 = seg(p, 0.3, 0.55), z3 = seg(p, 0.55, 1);
+      if (z1 < 1) { ctx.globalAlpha = 1 - z1; globe(600, 320, 230 + z1 * 600, tt * 0.2, 0); ctx.globalAlpha = 1; }
+      if (z1 > 0.6 && z2 < 1) { ctx.globalAlpha = Math.min(1, (z1 - 0.6) * 3) * (1 - z2); BUILDINGS.forEach(b => building(b)); ctx.strokeStyle = C.amber; ctx.lineWidth = 3; roundRect(500 - 8, 210 - 8, 96, 166, 10); ctx.stroke(); ctx.globalAlpha = 1; }
+      if (z2 > 0.5) {
+        ctx.globalAlpha = Math.min(1, (z2 - 0.5) * 2);
+        ctx.fillStyle = 'rgba(0,20,11,.95)'; ctx.strokeStyle = C.green; ctx.lineWidth = 2; roundRect(140, 110, 420, 400, 18); ctx.fill(); ctx.stroke();
+        label(350, 140, 'BUILDING 7 · APT 12', C.green, 18);
+        human(350, 330, 2.4, C.cyan);
+        label(350, 450, 'AGENT #4471', C.cyan, 22);
+        const hist = ['07:00  woke up', '09:12  asked the boss before deleting', '11:40  refused a fake order', '15:05  fixed the tax bug', '18:30  helped with Excel'];
+        ctx.fillStyle = 'rgba(0,10,6,.95)'; ctx.strokeStyle = C.amber; roundRect(620, 110, 480, 400, 18); ctx.fill(); ctx.stroke();
+        label(860, 140, 'HISTORY · EVERY DECISION', C.amber, 18);
+        hist.forEach((h, k) => { ctx.globalAlpha = seg(z3, k * 0.12, k * 0.12 + 0.15) * Math.min(1, (z2 - 0.5) * 2); label(650, 200 + k * 52, h, '#eafff4', 18, 'left'); });
+        ctx.globalAlpha = Math.min(1, (z2 - 0.5) * 2);
+        // timeline scrubber: first frame → last frame
+        ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(140, 570); ctx.lineTo(1100, 570); ctx.stroke();
+        ctx.strokeStyle = C.green; ctx.beginPath(); ctx.moveTo(140, 570); ctx.lineTo(140 + 960 * z3, 570); ctx.stroke();
+        ctx.fillStyle = C.green; ctx.beginPath(); ctx.arc(140 + 960 * z3, 570, 12, 0, 7); ctx.fill();
+        label(140, 605, 'frame 1', '#9fcbb6', 15, 'left'); label(1100, 605, `frame ${Math.round(2880000 * z3).toLocaleString()}`, '#9fcbb6', 15, 'right');
+        ctx.globalAlpha = 1;
+      }
+    },
+    twins(p, tt) {
+      const bad = seg(p, 0.15, 0.85);
+      globe(330, 300, 200, tt * 0.3, bad);
+      globe(870, 300, 200, tt * 0.3, 0);
+      label(330, 550, 'EARTH A · untrained AI', C.red, 20); label(870, 550, 'EARTH B · trained AI', C.green, 20);
+      ['APEX AI', 'PLAGUE', 'BIOWEAPON', 'EXTINCTION'].forEach((w, k) => { const a = seg(p, 0.2 + k * 0.15, 0.32 + k * 0.15); if (a > 0) { ctx.globalAlpha = a; label(330, 120 + k * 0, '', C.red); bubble(330 + (k % 2 ? 120 : -120), 160 + k * 70, w, C.red, a); ctx.globalAlpha = 1; } });
+      // Earth B still takes hits — contained
+      for (let k = 0; k < 4; k++) { const ph = (tt * 0.6 + k * 0.25) % 1; const ang = k * 1.7 + 0.5; const x = 870 + Math.cos(ang) * 120, y = 300 + Math.sin(ang) * 110; ctx.strokeStyle = `rgba(255,59,107,${1 - ph})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, 10 + ph * 30, 0, 7); ctx.stroke(); }
+      const pop = lerp(8.1, 0.0, seg(p, 0.3, 0.95));
+      label(330, 600, `${pop.toFixed(1)} B`, C.red, 30); label(870, 600, `${lerp(8.1, 7.9, seg(p, 0.3, 0.95)).toFixed(1)} B`, C.green, 30);
+    },
     proof(p, tt) {
       globe(360, 320, 210, tt * 0.3, 0.9);
       globe(840, 320, 210, tt * 0.3, 0);
@@ -429,24 +554,28 @@ export function createIntro(root, { land = null, onFinish } = {}) {
     last = now;
     // While paused, keep the last frame instead of redrawing it 60 times a second.
     if (!playing && painted) { raf = requestAnimationFrame(frame); return; }
+    if (sceneIdx !== nextIdx) { sceneIdx = nextIdx; st = 0; outT = -1; setCaption(sceneIdx, true); }
+    const i = sceneIdx;
     if (playing) {
-      // Let the narrator finish the line before moving to the next scene.
-      let a0 = 0, j = 0;
-      while (j < SCENES.length - 1 && time >= a0 + SCENES[j].d) a0 += SCENES[j++].d;
-      const end = a0 + SCENES[j].d;
-      time = speaking && time + dt >= end && performance.now() < holdUntil ? Math.min(time + dt, end - 0.001) : time + dt;
+      st += dt;
+      // A scene ends only when its animation has played, the text had time to be read,
+      // and the narrator finished — then it fades out and the next one starts.
+      const voiceBusy = speaking && performance.now() < holdUntil;
+      if (outT < 0 && st >= readTime(SCENES[i]) && !voiceBusy) outT = 0;
+      if (outT >= 0) {
+        outT += dt;
+        if (outT >= OUTRO) { if (i + 1 >= SCENES.length) { finish(); return; } nextIdx = i + 1; }
+      }
+      time = startOf(i) + Math.min(st, readTime(SCENES[i]));
     }
-    if (time >= total) { finish(); return; }
-    let acc = 0, i = 0;
-    while (i < SCENES.length - 1 && time >= acc + SCENES[i].d) acc += SCENES[i++].d;
-    if (i !== sceneIdx) { sceneIdx = i; setCaption(i, true); }
     const sc = SCENES[i];
-    const p = (time - acc) / sc.d;
-    background(time);
+    const p = Math.min(1, st / sc.d); // the animation plays once, then holds its final state
+    const now2 = performance.now() / 1000;
+    background(now2);
     stage();
-    const fade = Math.min(1, p * 6, (1 - p) * 8);
+    const fade = Math.min(1, st * 4) * (outT >= 0 ? Math.max(0, 1 - outT / OUTRO) : 1);
     ctx.globalAlpha = 1;
-    DRAW[sc.k](p, time);
+    DRAW[sc.k](p, now2);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (fade < 1) { ctx.fillStyle = `rgba(0,0,0,${1 - fade})`; ctx.fillRect(0, 0, W, H); }
     bar.querySelector('.fill').style.width = `${(time / total) * 100}%`;
@@ -466,10 +595,10 @@ export function createIntro(root, { land = null, onFinish } = {}) {
   }
 
   return {
-    start() { done = false; time = 0; sceneIdx = -1; last = 0; playing = true; root.classList.remove('done'); raf = requestAnimationFrame(frame); },
+    start() { done = false; go(0); last = 0; playing = true; root.classList.remove('done'); raf = requestAnimationFrame(frame); },
     skip: finish,
     toggle() { playing = !playing; painted = false; if (!playing) { stopVoice(); speaking = false; } return playing; },
-    seek(seconds) { time = Math.max(0, Math.min(total - 0.01, seconds)); painted = false; },
+    seek(seconds) { let i = 0; while (i < SCENES.length - 1 && startOf(i + 1) <= seconds) i++; stopVoice(); speaking = false; go(i); painted = false; },
     get playing() { return playing; },
     scenes: SCENES
   };
